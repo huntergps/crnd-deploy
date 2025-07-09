@@ -1,5 +1,5 @@
-# Releases
+# Lanzamientos
 
-## Release 1.0.0
+## Lanzamiento 1.0.0
 
-Initial release
+Lanzamiento inicial

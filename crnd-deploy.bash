@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# CRND Deploy - the simple way to start new production-ready Odoo instance.
+# CRND Deploy - la forma simple de iniciar una nueva instancia de Odoo lista para producción.
 # Copyright (C) 2020  Center of Research and Development
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-# WARN: Must be ran under SUDO
+# ADVERTENCIA: Debe ejecutarse bajo SUDO
 
-# NOTE: Automaticaly installs odoo-helper-scripts if not installed yet
+# NOTA: Instala automáticamente odoo-helper-scripts si no está instalado aún
 
-# Supports passing parametrs as environment variables and as arguments to script
-# Environment vars and default values:
+# Soporta pasar parámetros como variables de entorno y como argumentos al script
+# Variables de entorno y valores por defecto:
 #   ODOO_USER=odoo
 #   ODOO_INSTALL_DIR=/opt/odoo
 #   ODOO_DB_HOST=localhost
@@ -33,12 +33,12 @@
 #   ODOO_VERSION=12.0
 #   ODOO_WORKERS=2
 #
-# Also some configuration could be passed as command line args:
+# También alguna configuración puede pasarse como argumentos de línea de comandos:
 #   sudo bash crnd-deploy.bash <db_host> <db_user> <db_pass>
 # 
 
 #--------------------------------------------------
-# Script params
+# Parámetros del script
 #--------------------------------------------------
 SCRIPT=$0;
 SCRIPT_NAME=$(basename $SCRIPT);
@@ -49,17 +49,17 @@ NGIX_CONF_GEN="$SCRIPT_DIR/gen_nginx.py";
 WORKDIR=`pwd`;
 
 #--------------------------------------------------
-# Version
+# Versión
 #--------------------------------------------------
 CRND_DEPLOY_VERSION="1.0.0"
 
 #--------------------------------------------------
-# Defaults
+# Valores por defecto
 #--------------------------------------------------
 DEFAULT_ODOO_BRANCH=18.3
 DEFAULT_ODOO_VERSION=18.3
 #--------------------------------------------------
-# Parse environment variables
+# Analizar variables de entorno
 #--------------------------------------------------
 ODOO_REPO=${ODOO_REPO:-https://github.com/odoo/odoo};
 ODOO_BRANCH=${ODOO_BRANCH:-$DEFAULT_ODOO_BRANCH};
@@ -74,7 +74,7 @@ INSTALL_MODE=${INSTALL_MODE:-git};
 
 
 #--------------------------------------------------
-# Define color variables
+# Definir variables de color
 #--------------------------------------------------
 NC='\e[0m';
 REDC='\e[31m';
@@ -86,79 +86,79 @@ LBLUEC='\e[94m';
 
 if [[ $UID != 0 ]]; then
     echo -e "${REDC}ERROR${NC}";
-    echo -e "${YELLOWC}Please run this script with sudo:${NC}"
+    echo -e "${YELLOWC}Por favor ejecuta este script con sudo:${NC}"
     echo -e "${BLUEC}sudo $0 $* ${NC}"
     exit 1
 fi
 
 
 #--------------------------------------------------
-# FN: Print usage
+# FN: Imprimir uso
 #--------------------------------------------------
 function print_usage {
 
     echo "
-Usage:
+Uso:
 
-    crnd-deploy.bash [options]    - install odoo
+    crnd-deploy.bash [opciones]    - instalar odoo
 
-Options:
+Opciones:
 
-    --odoo-repo <repo>       - git repository to clone odoo from.
-                               default: $ODOO_REPO
-    --odoo-branch <branch>   - odoo branch to clone.
-                               default: $ODOO_BRANCH
-    --odoo-version <version> - odoo version to clone.
-                               default: $ODOO_VERSION
-    --odoo-user <user>       - name of system user to run odoo with.
-                               default: $ODOO_USER
-    --db-host <host>         - database host to be used by odoo.
-                               default: $DB_HOST
-    --db-user <user>         - database user to connect to db with
-                               default: $DB_USER
-    --db-password <password> - database password to connect to db with
-                               default: $DB_PASSWORD
-    --install-dir <path>     - directory to install odoo in
-                               default: $PROJECT_ROOT_DIR
-    --install-mode <mode>    - installation mode. could be: 'git', 'archive'
-                               default: $INSTALL_MODE
-    --local-postgres         - install local instance of postgresql server
-    --proxy-mode             - Set this option if you plan to run odoo
-                               behind proxy (nginx, etc)
-    --workers <workers>      - number of workers to run.
-                               Default: $ODOO_WORKERS
-    --local-nginx            - install local nginx and configure it for this
-                               odoo instance
-    --odoo-helper-dev        - If set then use dev version of odoo-helper
-    --install-ua-locales     - If set then install also uk_UA and ru_RU
-                               system locales.
-    -v|--version             - print version and exit
-    -h|--help|help           - show this help message
+    --odoo-repo <repo>       - repositorio git para clonar odoo desde.
+                               por defecto: $ODOO_REPO
+    --odoo-branch <branch>   - rama de odoo para clonar.
+                               por defecto: $ODOO_BRANCH
+    --odoo-version <version> - versión de odoo para clonar.
+                               por defecto: $ODOO_VERSION
+    --odoo-user <user>       - nombre del usuario del sistema para ejecutar odoo con.
+                               por defecto: $ODOO_USER
+    --db-host <host>         - host de base de datos a usar por odoo.
+                               por defecto: $DB_HOST
+    --db-user <user>         - usuario de base de datos para conectar a la db
+                               por defecto: $DB_USER
+    --db-password <password> - contraseña de base de datos para conectar a la db
+                               por defecto: $DB_PASSWORD
+    --install-dir <path>     - directorio para instalar odoo en
+                               por defecto: $PROJECT_ROOT_DIR
+    --install-mode <mode>    - modo de instalación. puede ser: 'git', 'archive'
+                               por defecto: $INSTALL_MODE
+    --local-postgres         - instalar instancia local de servidor postgresql
+    --proxy-mode             - Establece esta opción si planeas ejecutar odoo
+                               detrás de proxy (nginx, etc)
+    --workers <workers>      - número de workers a ejecutar.
+                               Por defecto: $ODOO_WORKERS
+    --local-nginx            - instalar nginx local y configurarlo para esta
+                               instancia de odoo
+    --odoo-helper-dev        - Si se establece entonces usar versión dev de odoo-helper
+    --install-ua-locales     - Si se establece entonces instalar también uk_UA y ru_RU
+                               locales del sistema.
+    -v|--version             - imprimir versión y salir
+    -h|--help|help           - mostrar este mensaje de ayuda
 
-Suggestion:
+Sugerencia:
 
-    Take a look at [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit) project,
-    and discover the easiest way to manage your odoo installation.
+    Echa un vistazo al proyecto [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit),
+    y descubre la forma más fácil de gestionar tu instalación de odoo.
 
-    Just short notes about [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
-        - start new production-ready odoo instance in 1-2 minutes.
-        - add custom addons to your odoo instances in 5-10 minutes.
-        - out-of-the-box email configuration: just press button and
-          add some records to your DNS, and get a working email
-        - make your odoo instance available to external world in 30 seconds:
-          just add single record in your DNS
+    Solo notas breves sobre [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
+        - iniciar nueva instancia de odoo lista para producción en 1-2 minutos.
+        - agregar complementos personalizados a tus instancias de odoo en 5-10 minutos.
+        - configuración de email lista para usar: solo presiona botón y
+          agrega algunos registros a tu DNS, y obtén un email funcionando
+        - hacer tu instancia de odoo disponible al mundo externo en 30 segundos:
+          solo agrega un solo registro en tu DNS
 
-    If you have any questions, then contact us at
+    Si tienes alguna pregunta, entonces contáctanos en
     [info@crnd.pro](mailto:info@crnd.pro),
-    so we could schedule online-demonstration.
+    así podemos programar una demostración en línea.
 
 ---
-Version: ${CRND_DEPLOY_VERSION}
+Versión: ${CRND_DEPLOY_VERSION}
 ";
 }
 
 #--------------------------------------------------
-# Parse command line
+# Analizar línea de comandos
 #--------------------------------------------------
 while [[ $# -gt 0 ]]
 do
@@ -216,7 +216,7 @@ do
             PROXY_MODE=1;
         ;;
         --local-postgres)
-            # Generate random password for database
+            # Generar contraseña aleatoria para la base de datos
             DB_HOST="localhost";
             DB_PASSWORD="$(< /dev/urandom tr -dc A-Za-z0-9 | head -c 32)";
             INSTALL_LOCAL_POSTGRES=1;
@@ -253,37 +253,37 @@ done;
 set -e;   # fail on errors
 
 #--------------------------------------------------
-# Update Server and Install Dependencies
+# Actualizar Servidor y Instalar Dependencias
 #--------------------------------------------------
-echo -e "\n${BLUEC}Update Server...${NC}\n";
+echo -e "\n${BLUEC}Actualizar Servidor...${NC}\n";
 sudo apt-get update -qq;
 sudo apt-get upgrade -qq -y;
-echo -e "\n${BLUEC}Installing basic dependencies...${NC}\n";
+echo -e "\n${BLUEC}Instalando dependencias básicas...${NC}\n";
 sudo apt-get install -qqq -y \
     wget locales software-properties-common;
 
-# Install Python 3.10+ for Odoo 18.3
-echo -e "\n${BLUEC}Installing Python 3.10+...${NC}\n";
+# Instalar Python 3.10+ para Odoo 18.3
+echo -e "\n${BLUEC}Instalando Python 3.10+...${NC}\n";
 sudo add-apt-repository ppa:deadsnakes/ppa -y;
 sudo apt-get update -qq;
 sudo apt-get install -qqq -y python3.10 python3.10-dev python3.10-venv python3.10-distutils;
 
-# Create symlink for python3.10 as python3
+# Crear enlace simbólico para python3.10 como python3
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1;
 sudo update-alternatives --config python3;
 
-# Verify Python version for Odoo 18.3
-echo -e "\n${BLUEC}Verifying Python version...${NC}\n";
+# Verificar versión de Python para Odoo 18.3
+echo -e "\n${BLUEC}Verificando versión de Python...${NC}\n";
 python3 --version;
-if ! python3 -c "import sys; assert sys.version_info >= (3, 10), 'Python 3.10+ required for Odoo 18.3'" 2>/dev/null; then
-    echo -e "${REDC}ERROR${NC}: Python 3.10+ is required for Odoo 18.3";
+if ! python3 -c "import sys; assert sys.version_info >= (3, 10), 'Python 3.10+ requerido para Odoo 18.3'" 2>/dev/null; then
+    echo -e "${REDC}ERROR${NC}: Python 3.10+ es requerido para Odoo 18.3";
     exit 1;
 fi
 
 #--------------------------------------------------
-# Generate locales
+# Generar locales
 #--------------------------------------------------
-echo -e "\n${BLUEC}Update locales...${NC}\n";
+echo -e "\n${BLUEC}Actualizar locales...${NC}\n";
 sudo locale-gen en_US.UTF-8;
 sudo locale-gen en_GB.UTF-8;
 
@@ -296,28 +296,28 @@ update-locale LANG="en_US.UTF-8";
 update-locale LANGUAGE="en_US:en";
 
 #--------------------------------------------------
-# Ensure odoo-helper installed
+# Asegurar que odoo-helper esté instalado
 #--------------------------------------------------
 if ! command -v odoo-helper >/dev/null 2>&1; then
-    echo -e "${BLUEC}Odoo-helper not installed! installing...${NC}";
+    echo -e "${BLUEC}Odoo-helper no instalado! Instalando...${NC}";
     if ! wget -q -T 2 -O /tmp/odoo-helper-install.bash \
             https://raw.githubusercontent.com/huntergps/odoo-helper-scripts/master/install-system.bash; then
-        echo "${REDC}ERROR${NC}: Cannot download odoo-helper-scripts installer from github. Check your network connection.";
+        echo "${REDC}ERROR${NC}: No se pudo descargar el instalador de odoo-helper-scripts desde github. Verifica tu conexión de red.";
         exit 1;
     fi
 
-    # install latest version of odoo-helper scripts
+    # Instalar la última versión de odoo-helper scripts
     if [ -z "$USE_DEV_VERSION_OF_ODOO_HElPER" ]; then
         sudo bash /tmp/odoo-helper-install.bash master;
     else
         sudo bash /tmp/odoo-helper-install.bash dev;
     fi
 
-    # Print odoo-helper version
+    # Imprimir versión de odoo-helper
     odoo-helper --version;
 fi
 
-# Install odoo pre-requirements
+# Instalar pre-requisitos de odoo
 sudo odoo-helper install pre-requirements -y;
 sudo odoo-helper install sys-deps -y --branch "$ODOO_BRANCH" "$ODOO_VERSION";
 
@@ -325,9 +325,9 @@ if [ ! -z $INSTALL_LOCAL_POSTGRES ]; then
     sudo odoo-helper install postgres;
 
     if ! sudo odoo-helper exec postgres_test_connection; then
-        echo -e "${YELLOWC}WARNING${NC}: it seams postgres not started, so start it before creating postgres user.";
+        echo -e "${YELLOWC}ADVERTENCIA${NC}: Parece que el servidor postgres no se inició, así que muéstralo antes de crear el usuario de la base de datos.";
 
-        # It seams we ran inside docker container, so start postgres server before user creation
+        # Parece que estamos dentro de un contenedor de docker, así que iniciamos el servidor postgres antes de crear el usuario
         sudo /etc/init.d/postgresql start;
         sudo odoo-helper postgres user-create $DB_USER $DB_PASSWORD;
         sudo /etc/init.d/postgresql stop;
@@ -337,43 +337,43 @@ if [ ! -z $INSTALL_LOCAL_POSTGRES ]; then
 fi
 
 #--------------------------------------------------
-# Install Odoo
+# Instalar Odoo
 #--------------------------------------------------
-echo -e "\n${BLUEC}Installing odoo...${NC}\n";
-# import odoo-helper common module, which contains some useful functions
+echo -e "\n${BLUEC}Instalando odoo...${NC}\n";
+# importar módulo común de odoo-helper, que contiene algunas funciones útiles
 source $(odoo-helper system lib-path common);
 
-# import odoo-helper libs
+# importar bibliotecas de odoo-helper
 ohelper_require 'install';
 ohelper_require 'config';
 
-# Do not ask confirmation when installing dependencies
+# No preguntar confirmación al instalar dependencias
 ALWAYS_ANSWER_YES=1;
 
-# Configure default odoo-helper variables
-config_set_defaults;  # imported from common module
+# Configurar variables por defecto de odoo-helper
+config_set_defaults;  # importado desde el módulo común
 
-# define addons path to be placed in config files
+# definir ruta de complementos a colocar en los archivos de configuración
 ADDONS_PATH="$ODOO_PATH/openerp/addons,$ODOO_PATH/odoo/addons,$ODOO_PATH/addons,$ADDONS_DIR";
 INIT_SCRIPT="/etc/init.d/odoo";
-ODOO_PID_FILE="/var/run/odoo.pid";  # default odoo pid file location
+ODOO_PID_FILE="/var/run/odoo.pid";  # ubicación por defecto del archivo pid de odoo
 
-install_create_project_dir_tree;   # imported from 'install' module
+install_create_project_dir_tree;   # importado desde el módulo 'install'
 
 if [ ! -d $ODOO_PATH ]; then
     if [ "$INSTALL_MODE" == "git" ]; then
-        install_clone_odoo;   # imported from 'install' module
+        install_clone_odoo;   # importado desde el módulo 'install'
     elif [ "$INSTALL_MODE" == "archive" ]; then
         install_download_odoo;
     else
-        echo -e "${REDC}ERROR:${NC} wrong install mode specified: '$INSTALL_MODE'!";
+        echo -e "${REDC}ERROR:${NC} modo de instalación incorrecto especificado: '$INSTALL_MODE'!";
     fi
 fi
 
-# install odoo itself
-install_odoo_install;  # imported from 'install' module
+# instalar odoo en sí
+install_odoo_install;  # importado desde el módulo 'install'
 
-# generate odoo config file
+# generar archivo de configuración de odoo
 declare -A ODOO_CONF_OPTIONS;
 ODOO_CONF_OPTIONS[addons_path]="$ADDONS_PATH";
 ODOO_CONF_OPTIONS[admin_passwd]="$(random_string 32)";
@@ -385,25 +385,25 @@ ODOO_CONF_OPTIONS[db_user]="$DB_USER";
 ODOO_CONF_OPTIONS[db_password]="$DB_PASSWORD";
 ODOO_CONF_OPTIONS[workers]=$ODOO_WORKERS;
 
-# pid file will be managed by init script, not odoo itself
+# el archivo pid será manejado por el script de inicialización, no por odoo en sí
 ODOO_CONF_OPTIONS[pidfile]="None";
 
 if [ ! -z $PROXY_MODE ]; then
     ODOO_CONF_OPTIONS[proxy_mode]="True";
 fi
 
-install_generate_odoo_conf $ODOO_CONF_FILE;   # imported from 'install' module
+install_generate_odoo_conf $ODOO_CONF_FILE;   # importado desde el módulo 'install'
 
-# Write odoo-helper project config
+# Escribir configuración del proyecto de odoo-helper
 echo "#---ODOO-INSTANCE-CONFIG---" >> /etc/$CONF_FILE_NAME;
 echo "`config_print`" >> /etc/$CONF_FILE_NAME;
 
-# this will make odoo helper scripts to run odoo with specified user
-# (via sudo call)
+# esto hará que los scripts de odoo-helper ejecuten odoo con el usuario especificado
+# (a través de una llamada sudo)
 echo "SERVER_RUN_USER=$ODOO_USER;" >> /etc/$CONF_FILE_NAME;
 
 #--------------------------------------------------
-# Fix odoo 9/10 addons path compatability
+# Corregir compatibilidad de addons de odoo 9/10
 #--------------------------------------------------
 if [ ! -d $ODOO_PATH/openerp/addons ]; then
     sudo mkdir -p $ODOO_PATH/openerp/addons;
@@ -413,20 +413,20 @@ if [ ! -d $ODOO_PATH/odoo/addons ]; then
 fi
 
 #--------------------------------------------------
-# Create Odoo User
+# Crear Usuario Odoo
 #--------------------------------------------------
 if ! getent passwd $ODOO_USER  > /dev/null; then
-    echo -e "\n${BLUEC}Createing Odoo user: $ODOO_USER ${NC}\n";
+    echo -e "\n${BLUEC}Creando usuario Odoo: $ODOO_USER ${NC}\n";
     sudo adduser --system --no-create-home --home $PROJECT_ROOT_DIR \
         --quiet --group $ODOO_USER;
 else
-    echo -e "\n${YELLOWC}Odoo user already exists, using it.${NC}\n";
+    echo -e "\n${YELLOWC}El usuario Odoo ya existe, usando el.${NC}\n";
 fi
 
 #--------------------------------------------------
-# Create Init Script
+# Crear Script de Inicialización
 #--------------------------------------------------
-echo -e "\n${BLUEC}Creating init script${NC}\n";
+echo -e "\n${BLUEC}Creando script de inicialización${NC}\n";
 sudo cp $ODOO_PATH/debian/init /etc/init.d/odoo
 sudo chmod a+x /etc/init.d/odoo
 sed -i -r "s@DAEMON=(.*)@DAEMON=$(get_server_script)@" /etc/init.d/odoo;
@@ -437,7 +437,7 @@ sed -i -r "s@PIDFILE=(.*)@PIDFILE=$ODOO_PID_FILE@" /etc/init.d/odoo;
 sed -i -r "s@PATH=(.*)@PATH=\1:$VENV_DIR/bin@" /etc/init.d/odoo;
 sudo update-rc.d odoo defaults
 
-# Configuration file
+# Archivo de configuración
 sudo chown root:$ODOO_USER $ODOO_CONF_FILE;
 sudo chmod 0640 $ODOO_CONF_FILE;
 
@@ -445,16 +445,16 @@ sudo chmod 0640 $ODOO_CONF_FILE;
 sudo chown $ODOO_USER:$ODOO_USER $LOG_DIR;
 sudo chmod 0750 $LOG_DIR
 
-# Data dir
+# Directorio de datos
 sudo chown $ODOO_USER:$ODOO_USER $DATA_DIR;
 
-# Odoo root dir
+# Directorio raíz de Odoo
 sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR;
 
 #--------------------------------------------------
-# Configure logrotate
+# Configurar logrotate
 #--------------------------------------------------
-echo -e "\n${BLUEC}Configuring logrotate${NC}\n";
+echo -e "\n${BLUEC}Configurando logrotate${NC}\n";
 sudo cat > /etc/logrotate.d/odoo << EOF
 $LOG_DIR/*.log {
     copytruncate
@@ -463,16 +463,16 @@ $LOG_DIR/*.log {
 }
 EOF
 
-echo -e "\n${GREENC}Odoo installed!${NC}\n";
+echo -e "\n${GREENC}Odoo instalado!${NC}\n";
 
 if [ ! -z $INSTALL_LOCAL_NGINX ]; then
-    echo -e "${BLUEC}Installing and configuring local nginx..,${NC}";
+    echo -e "${BLUEC}Instalando y configurando nginx local..,${NC}";
     NGINX_CONF_PATH="/etc/nginx/sites-available/$(hostname).conf";
     sudo apt-get install -qqq -y --no-install-recommends nginx;
     sudo python3 $NGIX_CONF_GEN \
         --instance-name="$(hostname -s)" \
         --frontend-server-name="$(hostname)" > $NGINX_CONF_PATH;
-    echo -e "${GREENC}Nginx seems to be installed and default config is generated. ";
-    echo -e "Look at $NGINX_CONF_PATH for nginx config.${NC}";
+    echo -e "${GREENC}Nginx parece estar instalado y la configuración por defecto se ha generado. ";
+    echo -e "Mira $NGINX_CONF_PATH para la configuración de nginx.${NC}";
 fi
 

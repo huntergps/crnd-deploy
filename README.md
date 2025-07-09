@@ -1,42 +1,42 @@
 # CRND Deploy
 
-This is simple script to install and configure production-ready [Odoo](https://www.odoo.com/) instance.
+Este es un script simple para instalar y configurar una instancia de [Odoo](https://www.odoo.com/) lista para producción.
 
-To deploy [Odoo](https://www.odoo.com/) just clone repo to machine and run `sudo crnd-deploy.bash`.
-To get install options, just call `sudo crnd-deploy.bash --help` command.
+Para desplegar [Odoo](https://www.odoo.com/) simplemente clona el repositorio en la máquina y ejecuta `sudo crnd-deploy.bash`.
+Para obtener opciones de instalación, simplemente llama al comando `sudo crnd-deploy.bash --help`.
 
-Also, this script supports automatic installation of
-[PostgreSQL](https://www.postgresql.org/) and
-[Nginx](https://nginx.org/en/) on same machine.
+Además, este script soporta la instalación automática de
+[PostgreSQL](https://www.postgresql.org/) y
+[Nginx](https://nginx.org/en/) en la misma máquina.
 
 ## Yodoo Cockpit
 
 [![Yodoo Cockpit](https://crnd.pro/web/image/18846/banner_2_4_gif_animation_cut.gif)](https://crnd.pro/yodoo-cockpit)
 
-Take a look at [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit) project, and discover the easiest way to manage your odoo installation.
-Just short notes about [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
-- start new production-ready odoo instance in 1-2 minutes.
-- add custom addons to your odoo instances in 5-10 minutes.
-- out-of-the-box email configuration: just press button and add some records to your DNS, and get a working email
-- make your odoo instance available to external world (internet) in 30 seconds (just add single record in your DNS)
+Echa un vistazo al proyecto [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit) y descubre la forma más fácil de gestionar tu instalación de Odoo.
+Solo notas breves sobre [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
+- iniciar una nueva instancia de Odoo lista para producción en 1-2 minutos.
+- agregar complementos personalizados a tus instancias de Odoo en 5-10 minutos.
+- configuración de correo electrónico lista para usar: solo presiona un botón y agrega algunos registros a tu DNS, y obtén un correo electrónico funcional
+- hacer tu instancia de Odoo disponible para el mundo externo (internet) en 30 segundos (solo agrega un registro en tu DNS)
 
-If you have any questions, then contact us at [info@crnd.pro](mailto:info@crnd.pro), so we could schedule online-demonstration.
+Si tienes alguna pregunta, contáctanos en [info@crnd.pro](mailto:info@crnd.pro), para que podamos programar una demostración en línea.
 
-## CRND-Deploy Requirements
+## Requisitos de CRND-Deploy
 
-Only [Ubuntu](https://ubuntu.com/) 16.04, 18.04, 20.04, and 22.04 supported and tested.
+Solo [Ubuntu](https://ubuntu.com/) 16.04, 18.04, 20.04 y 22.04 son soportados y probados.
 
-May be working on other debian-based linux distributions, but without any warranty.
+Puede funcionar en otras distribuciones Linux basadas en Debian, pero sin ninguna garantía.
 
-**Note**: Odoo 18.3 requires Ubuntu 22.04+ and Python 3.10+.
+**Nota**: Odoo 18.3 requiere Ubuntu 22.04+ y Python 3.10+.
 
-## Supported Odoo Versions
+## Versiones de Odoo Soportadas
 
-| Odoo Serie | Support            |
+| Serie Odoo | Soporte            |
 |------------|--------------------|
-| 8.0        | ***not tested***   |
-| 9.0        | ***not tested***   |
-| 10.0       | ***not tested***   |
+| 8.0        | ***no probado***   |
+| 9.0        | ***no probado***   |
+| 10.0       | ***no probado***   |
 | 11.0       | :heavy_check_mark: |
 | 12.0       | :heavy_check_mark: |
 | 13.0       | :heavy_check_mark: |
@@ -47,111 +47,111 @@ May be working on other debian-based linux distributions, but without any warran
 | 18.0       | :heavy_check_mark: |
 | 18.3       | :heavy_check_mark: |
 
-## Options available
+## Opciones disponibles
 
-Just call 
+Simplemente llama
 
 ```sh
 sudo crnd-deploy.bash --help
 ```
 
-And see help message with all available commands:
+Y ve el mensaje de ayuda con todos los comandos disponibles:
 
 ```
-Usage:
+Uso:
 
-    crnd-deploy.bash [options]    - install odoo
+    crnd-deploy.bash [opciones]    - instalar odoo
 
-Options:
+Opciones:
 
-    --odoo-repo <repo>       - git repository to clone odoo from.
-                               default: https://github.com/odoo/odoo
-    --odoo-branch <branch>   - odoo branch to clone.
-                               default: 12.0
-    --odoo-version <version> - odoo version to clone.
-                               default: 12.0
-    --odoo-user <user>       - name of system user to run odoo with.
-                               default: odoo
-    --db-host <host>         - database host to be used by odoo.
-                               default: localhost
-    --db-user <user>         - database user to connect to db with
-                               default: odoo
-    --db-password <password> - database password to connect to db with
-                               default: odoo
-    --install-dir <path>     - directory to install odoo in
-                               default: /opt/odoo
-    --install-mode <mode>    - installation mode. could be: 'git', 'archive'
-                               default: git
-    --local-postgres         - install local instance of postgresql server
-    --proxy-mode             - Set this option if you plan to run odoo
-                               behind proxy (nginx, etc)
-    --workers <workers>      - number of workers to run.
-                               Default: 2
-    --local-nginx            - install local nginx and configure it for this
-                               odoo instance
-    --odoo-helper-dev        - If set then use dev version of odoo-helper
-    --install-ua-locales     - If set then install also uk_UA and ru_RU
-                               system locales.
-    -v|--version             - print version and exit
-    -h|--help|help           - show this help message
+    --odoo-repo <repo>       - repositorio git para clonar odoo desde.
+                               predeterminado: https://github.com/odoo/odoo
+    --odoo-branch <branch>   - rama de odoo para clonar.
+                               predeterminado: 18.3
+    --odoo-version <version> - versión de odoo para clonar.
+                               predeterminado: 18.3
+    --odoo-user <user>       - nombre del usuario del sistema para ejecutar odoo con.
+                               predeterminado: odoo
+    --db-host <host>         - host de base de datos para ser usado por odoo.
+                               predeterminado: localhost
+    --db-user <user>         - usuario de base de datos para conectarse a la db con
+                               predeterminado: odoo
+    --db-password <password> - contraseña de base de datos para conectarse a la db con
+                               predeterminado: odoo
+    --install-dir <path>     - directorio para instalar odoo en
+                               predeterminado: /opt/odoo
+    --install-mode <mode>    - modo de instalación. puede ser: 'git', 'archive'
+                               predeterminado: git
+    --local-postgres         - instalar instancia local del servidor postgresql
+    --proxy-mode             - Establece esta opción si planeas ejecutar odoo
+                               detrás de un proxy (nginx, etc)
+    --workers <workers>      - número de workers para ejecutar.
+                               Predeterminado: 2
+    --local-nginx            - instalar nginx local y configurarlo para esta
+                               instancia de odoo
+    --odoo-helper-dev        - Si se establece entonces usar versión dev de odoo-helper
+    --install-ua-locales     - Si se establece entonces instalar también uk_UA y ru_RU
+                               locales del sistema.
+    -v|--version             - imprimir versión y salir
+    -h|--help|help           - mostrar este mensaje de ayuda
 
-Suggestion:
+Sugerencia:
 
-    Take a look at [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit) project,
-    and discover the easiest way to manage your odoo installation.
+    Echa un vistazo al proyecto [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit),
+    y descubre la forma más fácil de gestionar tu instalación de Odoo.
 
-    Just short notes about [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
-        - start new production-ready odoo instance in 1-2 minutes.
-        - add custom addons to your odoo instances in 5-10 minutes.
-        - out-of-the-box email configuration: just press button and
-          add some records to your DNS, and get a working email
-        - make your odoo instance available to external world in 30 seconds:
-          just add single record in your DNS
+    Solo notas breves sobre [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
+        - iniciar nueva instancia de Odoo lista para producción en 1-2 minutos.
+        - agregar complementos personalizados a tus instancias de Odoo en 5-10 minutos.
+        - configuración de correo electrónico lista para usar: solo presiona un botón y
+          agrega algunos registros a tu DNS, y obtén un correo electrónico funcional
+        - hacer tu instancia de Odoo disponible para el mundo externo en 30 segundos:
+          solo agrega un registro en tu DNS
 
-    If you have any questions, then contact us at
+    Si tienes alguna pregunta, contáctanos en
     [info@crnd.pro](mailto:info@crnd.pro),
-    so we could schedule online-demonstration.
+    para que podamos programar una demostración en línea.
 ```
 
-## Usage
+## Uso
 
-Basically to install [Odoo](https://www.odoo.com/) on new machine you have to do following:
+Básicamente para instalar [Odoo](https://www.odoo.com/) en una nueva máquina tienes que hacer lo siguiente:
 
 ```sh
-# Download script from github
+# Descargar script desde github
 git clone https://github.com/crnd-inc/crnd-deploy
 
-# Install odoo 18.3
+# Instalar odoo 18.3
 sudo bash crnd-deploy/crnd-deploy.bash --odoo-version 18.3 --local-postgres --local-nginx
 ```
 
-This command will automatically install and configure [Odoo](https://www.odoo.com/) 18.3,
+Este comando instalará y configurará automáticamente [Odoo](https://www.odoo.com/) 18.3,
 [PostgreSQL](https://www.postgresql.org/), [Nginx](https://nginx.org/en/)
-on machine, thus you get complete production-ready odoo installation.
+en la máquina, así obtienes una instalación completa de Odoo lista para producción.
 
 
-## Level up your service quality
+## Mejora la calidad de tu servicio
 
-Level up your service with our [Helpdesk](https://crnd.pro/solutions/helpdesk) / [Service Desk](https://crnd.pro/solutions/service-desk) / [ITSM](https://crnd.pro/itsm) solution.
+Mejora tu servicio con nuestra solución [Helpdesk](https://crnd.pro/solutions/helpdesk) / [Service Desk](https://crnd.pro/solutions/service-desk) / [ITSM](https://crnd.pro/itsm).
 
-Just test it at [yodoo.systems](https://yodoo.systems/saas/templates): choose template you like, and start working.
+Solo pruébalo en [yodoo.systems](https://yodoo.systems/saas/templates): elige la plantilla que te guste y comienza a trabajar.
 
-Test all available features of [Bureaucrat ITSM](https://crnd.pro/itsm) with [this template](https://yodoo.systems/saas/template/bureaucrat-itsm-demo-data-95).
+Prueba todas las características disponibles de [Bureaucrat ITSM](https://crnd.pro/itsm) con [esta plantilla](https://yodoo.systems/saas/template/bureaucrat-itsm-demo-data-95).
 
-## Bug tracker
+## Seguimiento de errores
 
-Bugs are tracked on [https://crnd.pro/requests](https://crnd.pro/requests>).
-In case of trouble, please report there.
+Los errores se rastrean en [https://crnd.pro/requests](https://crnd.pro/requests>).
+En caso de problemas, por favor reporta allí.
 
-## Maintainer
+## Mantenedor
 
 ![Center of Research & Development](https://crnd.pro/web/image/3699/300x140/crnd.png)
 
-Our web site is: [crnd.pro](https://crnd.pro/)
+Nuestro sitio web es: [crnd.pro](https://crnd.pro/)
 
-This module is maintained by the [Center of Research & Development](https://crnd.pro) company.
+Este módulo es mantenido por la empresa [Center of Research & Development](https://crnd.pro).
 
-We can provide you further Odoo Support, Odoo implementation, Odoo customization, Odoo 3rd Party development and integration software, consulting services (more info available on [our site](https://crnd.pro/our-services)).Our main goal is to provide the best quality product for you. 
+Podemos proporcionarte más Soporte de Odoo, implementación de Odoo, personalización de Odoo, desarrollo de software de terceros de Odoo e integración, servicios de consultoría (más información disponible en [nuestro sitio](https://crnd.pro/our-services)).Nuestro objetivo principal es proporcionar el mejor producto de calidad para ti. 
 
-For any questions [contact us](mailto:info@crnd.pro>).
+Para cualquier pregunta [contáctanos](mailto:info@crnd.pro>).
 
