@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 ##############################################################################
 #  CRND Deploy - the simple way to start new production-ready Odoo instance. #
@@ -157,5 +157,5 @@ template_group.add_argument(
 args = parser.parse_args()
 
 generated_conf = NGINX_TEMPLATE.format(**vars(args))
-print generated_conf
+print(generated_conf)
 

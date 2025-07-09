@@ -24,9 +24,11 @@ If you have any questions, then contact us at [info@crnd.pro](mailto:info@crnd.p
 
 ## CRND-Deploy Requirements
 
-Only [Ubuntu](https://ubuntu.com/) 16.04 and 18.04 supported and tested.
+Only [Ubuntu](https://ubuntu.com/) 16.04, 18.04, 20.04, and 22.04 supported and tested.
 
 May be working on other debian-based linux distributions, but without any warranty.
+
+**Note**: Odoo 18.3 requires Ubuntu 22.04+ and Python 3.10+.
 
 ## Supported Odoo Versions
 
@@ -38,6 +40,12 @@ May be working on other debian-based linux distributions, but without any warran
 | 11.0       | :heavy_check_mark: |
 | 12.0       | :heavy_check_mark: |
 | 13.0       | :heavy_check_mark: |
+| 14.0       | :heavy_check_mark: |
+| 15.0       | :heavy_check_mark: |
+| 16.0       | :heavy_check_mark: |
+| 17.0       | :heavy_check_mark: |
+| 18.0       | :heavy_check_mark: |
+| 18.3       | :heavy_check_mark: |
 
 ## Options available
 
@@ -113,11 +121,11 @@ Basically to install [Odoo](https://www.odoo.com/) on new machine you have to do
 # Download script from github
 git clone https://github.com/crnd-inc/crnd-deploy
 
-# Install odoo
-sudo bash crnd-deploy/crnd-deploy.bash --odoo-version 12.0 --local-postgres --local-nginx
+# Install odoo 18.3
+sudo bash crnd-deploy/crnd-deploy.bash --odoo-version 18.3 --local-postgres --local-nginx
 ```
 
-This command will automatically install and configure [Odoo](https://www.odoo.com/),
+This command will automatically install and configure [Odoo](https://www.odoo.com/) 18.3,
 [PostgreSQL](https://www.postgresql.org/), [Nginx](https://nginx.org/en/)
 on machine, thus you get complete production-ready odoo installation.
 

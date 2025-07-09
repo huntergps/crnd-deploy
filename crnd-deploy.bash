@@ -56,8 +56,8 @@ CRND_DEPLOY_VERSION="1.0.0"
 #--------------------------------------------------
 # Defaults
 #--------------------------------------------------
-DEFAULT_ODOO_BRANCH=12.0
-DEFAULT_ODOO_VERSION=12.0
+DEFAULT_ODOO_BRANCH=18.3
+DEFAULT_ODOO_VERSION=18.3
 #--------------------------------------------------
 # Parse environment variables
 #--------------------------------------------------
@@ -260,7 +260,25 @@ sudo apt-get update -qq;
 sudo apt-get upgrade -qq -y;
 echo -e "\n${BLUEC}Installing basic dependencies...${NC}\n";
 sudo apt-get install -qqq -y \
-    wget locales;
+    wget locales software-properties-common;
+
+# Install Python 3.10+ for Odoo 18.3
+echo -e "\n${BLUEC}Installing Python 3.10+...${NC}\n";
+sudo add-apt-repository ppa:deadsnakes/ppa -y;
+sudo apt-get update -qq;
+sudo apt-get install -qqq -y python3.10 python3.10-dev python3.10-venv python3.10-distutils;
+
+# Create symlink for python3.10 as python3
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1;
+sudo update-alternatives --config python3;
+
+# Verify Python version for Odoo 18.3
+echo -e "\n${BLUEC}Verifying Python version...${NC}\n";
+python3 --version;
+if ! python3 -c "import sys; assert sys.version_info >= (3, 10), 'Python 3.10+ required for Odoo 18.3'" 2>/dev/null; then
+    echo -e "${REDC}ERROR${NC}: Python 3.10+ is required for Odoo 18.3";
+    exit 1;
+fi
 
 #--------------------------------------------------
 # Generate locales
@@ -283,7 +301,7 @@ update-locale LANGUAGE="en_US:en";
 if ! command -v odoo-helper >/dev/null 2>&1; then
     echo -e "${BLUEC}Odoo-helper not installed! installing...${NC}";
     if ! wget -q -T 2 -O /tmp/odoo-helper-install.bash \
-            https://raw.githubusercontent.com/katyukha/odoo-helper-scripts/master/install-system.bash; then
+            https://raw.githubusercontent.com/huntergps/odoo-helper-scripts/master/install-system.bash; then
         echo "${REDC}ERROR${NC}: Cannot download odoo-helper-scripts installer from github. Check your network connection.";
         exit 1;
     fi
@@ -451,7 +469,7 @@ if [ ! -z $INSTALL_LOCAL_NGINX ]; then
     echo -e "${BLUEC}Installing and configuring local nginx..,${NC}";
     NGINX_CONF_PATH="/etc/nginx/sites-available/$(hostname).conf";
     sudo apt-get install -qqq -y --no-install-recommends nginx;
-    sudo python $NGIX_CONF_GEN \
+    sudo python3 $NGIX_CONF_GEN \
         --instance-name="$(hostname -s)" \
         --frontend-server-name="$(hostname)" > $NGINX_CONF_PATH;
     echo -e "${GREENC}Nginx seems to be installed and default config is generated. ";

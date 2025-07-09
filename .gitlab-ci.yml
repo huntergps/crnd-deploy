@@ -1,4 +1,4 @@
-image: registry.crnd.pro/crnd/docker/ubuntu:18.04
+image: registry.crnd.pro/crnd/docker/ubuntu:22.04
 
 cache:
     paths:
@@ -25,3 +25,9 @@ test-13.0:
         - bash ./crnd-deploy.bash --version
         - bash ./crnd-deploy.bash --help
         - bash ./crnd-deploy.bash --odoo-version 13.0 --odoo-user odoo --install-dir /opt/odoo --install-mode archive --local-postgres --local-nginx
+
+test-18.3:
+    script:
+        - bash ./crnd-deploy.bash --version
+        - bash ./crnd-deploy.bash --help
+        - bash ./crnd-deploy.bash --odoo-version 18.3 --odoo-user odoo --install-dir /opt/odoo --install-mode archive --local-postgres --local-nginx
