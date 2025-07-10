@@ -936,8 +936,12 @@ if [ -d "$VENV_DIR" ]; then
         fi
         
         # Intentar importar OpenSSL directamente
+        echo -e "  ${BLUEC}Probando importación de OpenSSL...${NC}";
         openssl_test_output=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>&1);
         openssl_test_exit_code=$?;
+        
+        echo -e "  ${BLUEC}DEBUG: openssl_test_exit_code = $openssl_test_exit_code${NC}";
+        echo -e "  ${BLUEC}DEBUG: openssl_test_output = $openssl_test_output${NC}";
         
         if [ $openssl_test_exit_code -eq 0 ]; then
             openssl_version=$(echo "$openssl_test_output" | grep "pyOpenSSL version:" | cut -d':' -f2 | xargs);
@@ -953,6 +957,7 @@ if [ -d "$VENV_DIR" ]; then
             echo -e "  ${YELLOWC}Error:${NC} $openssl_test_output";
             echo -e "  ${YELLOWC}Intentando reinstalar pyOpenSSL...${NC}";
             "$VENV_DIR/bin/pip" install --force-reinstall pyOpenSSL==21.0.0 2>/dev/null;
+            echo -e "  ${BLUEC}DEBUG: Incrementando missing_dirs por pyOpenSSL${NC}";
             ((missing_dirs++));
         fi
     else
@@ -963,6 +968,8 @@ else
     echo -e "  ${REDC}✗${NC} Entorno virtual no existe";
     ((missing_dirs++));
 fi
+
+echo -e "  ${BLUEC}DEBUG: Verificación de pyOpenSSL completada${NC}";
 
 # Verificar PostgreSQL
 echo -e "\n${BLUEC}Verificando PostgreSQL...${NC}";
@@ -1008,6 +1015,8 @@ else
     fi
 fi
 
+echo -e "  ${BLUEC}DEBUG: Verificación de PostgreSQL completada${NC}";
+
 # Verificar servicio Odoo
 echo -e "\n${BLUEC}Verificando servicio Odoo...${NC}";
 if [ -f "/etc/init.d/odoo" ]; then
@@ -1016,6 +1025,8 @@ else
     echo -e "  ${REDC}✗${NC} Script de servicio NO EXISTE";
     ((missing_dirs++));
 fi
+
+echo -e "  ${BLUEC}DEBUG: Verificación de servicio Odoo completada${NC}";
 
 # Resumen de verificación
 echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
@@ -1037,10 +1048,14 @@ echo -e "\n${GREENC}Odoo instalado!${NC}\n";
 echo -e "${BLUEC}Continuando con configuración de servicios...${NC}";
 echo -e "${BLUEC}DEBUG: missing_dirs = $missing_dirs${NC}";
 echo -e "${BLUEC}DEBUG: INSTALL_LOCAL_NGINX = $INSTALL_LOCAL_NGINX${NC}";
+echo -e "${BLUEC}DEBUG: Verificación completada, continuando con servicios...${NC}";
 
 #--------------------------------------------------
 # Configuración avanzada de Nginx con SSL
 #--------------------------------------------------
+echo -e "${BLUEC}DEBUG: ==========================================${NC}";
+echo -e "${BLUEC}DEBUG: LLEGANDO A LA SECCIÓN DE NGINX${NC}";
+echo -e "${BLUEC}DEBUG: ==========================================${NC}";
 echo -e "${BLUEC}DEBUG: Iniciando sección de configuración de Nginx...${NC}";
 echo -e "${BLUEC}Verificando configuración de Nginx...${NC}";
 echo -e "${BLUEC}INSTALL_LOCAL_NGINX = $INSTALL_LOCAL_NGINX${NC}";
