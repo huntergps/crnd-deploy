@@ -1012,14 +1012,20 @@ else
 fi
 
 echo -e "\n${GREENC}Odoo instalado!${NC}\n";
+echo -e "${BLUEC}Continuando con configuración de servicios...${NC}";
 
 #--------------------------------------------------
 # Configuración avanzada de Nginx con SSL
 #--------------------------------------------------
+echo -e "${BLUEC}Verificando configuración de Nginx...${NC}";
+echo -e "${BLUEC}INSTALL_LOCAL_NGINX = $INSTALL_LOCAL_NGINX${NC}";
+
 if [ ! -z $INSTALL_LOCAL_NGINX ]; then
     echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
     echo -e "${BLUEC}           CONFIGURANDO NGINX CON SSL AUTOMÁTICO                  ${NC}";
     echo -e "${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+    
+    echo -e "${GREENC}✓${NC} Iniciando instalación de Nginx y Certbot...";
     
     # Instalar Nginx y Certbot
     echo -e "${BLUEC}Instalando Nginx y Certbot...${NC}";
