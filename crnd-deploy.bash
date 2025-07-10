@@ -470,7 +470,19 @@ if [ ! -d $ODOO_PATH ]; then
 fi
 
 # instalar odoo en sí
-install_odoo_install;  # importado desde el módulo 'install'
+echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+echo -e "${BLUEC}                    INICIANDO INSTALACIÓN DE ODOO                    ${NC}";
+echo -e "${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+
+if ! install_odoo_install; then  # importado desde el módulo 'install'
+    echo -e "\n${REDC}═══════════════════════════════════════════════════════════════${NC}";
+    echo -e "${REDC}                ERROR CRÍTICO EN INSTALACIÓN                    ${NC}";
+    echo -e "${REDC}═══════════════════════════════════════════════════════════════${NC}";
+    echo -e "${REDC}La instalación de Odoo falló. Revisa los mensajes de error anteriores.${NC}";
+    echo -e "${YELLOWC}Los archivos temporales y configuraciones parciales pueden haber quedado en el sistema.${NC}";
+    echo -e "${REDC}ABORTANDO INSTALACIÓN COMPLETA DEL SERVIDOR${NC}";
+    exit 1;
+fi
 
 # generar archivo de configuración de odoo
 declare -A ODOO_CONF_OPTIONS;
