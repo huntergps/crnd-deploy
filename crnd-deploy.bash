@@ -56,8 +56,8 @@ CRND_DEPLOY_VERSION="1.0.0"
 #--------------------------------------------------
 # Valores por defecto
 #--------------------------------------------------
-DEFAULT_ODOO_BRANCH=18.3
-DEFAULT_ODOO_VERSION=18.3
+DEFAULT_ODOO_BRANCH=saas-18.3
+DEFAULT_ODOO_VERSION=saas-18.3
 #--------------------------------------------------
 # Analizar variables de entorno
 #--------------------------------------------------
