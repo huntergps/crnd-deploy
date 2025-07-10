@@ -1273,12 +1273,58 @@ EOF
     if [ "$ENABLE_SSL" == "yes" ] && [ ! -z "$DOMAIN_NAME" ] && [ ! -z "$SSL_EMAIL" ]; then
         echo -e "\n${BLUEC}Configurando SSL con Let's Encrypt...${NC}";
         
+        # Verificar y corregir dependencias de certbot
+        echo -e "${BLUEC}Verificando dependencias de certbot...${NC}";
+        
+        # Instalar pyOpenSSL en el sistema global para certbot
+        set +e;  # Temporalmente desactivar exit on error
+        python3_system_openssl_check=$(python3 -c "import OpenSSL; print('OK')" 2>/dev/null)
+        set -e;  # Reactivar exit on error
+        
+        if [ "$python3_system_openssl_check" != "OK" ]; then
+            echo -e "${YELLOWC}⚠${NC} pyOpenSSL no disponible en Python del sistema";
+            echo -e "${BLUEC}Instalando pyOpenSSL para certbot...${NC}";
+            
+            set +e;  # Temporalmente desactivar exit on error
+            sudo apt-get update -qq;
+            sudo apt-get install -y python3-openssl python3-cryptography;
+            
+            # Alternativa: usar pip del sistema si es necesario
+            if ! python3 -c "import OpenSSL" 2>/dev/null; then
+                echo -e "${BLUEC}Instalando pyOpenSSL vía pip del sistema...${NC}";
+                sudo python3 -m pip install pyOpenSSL==21.0.0 cryptography --break-system-packages 2>/dev/null || true;
+            fi
+            set -e;  # Reactivar exit on error
+        fi
+        
+        # Verificar que certbot funciona correctamente
+        echo -e "${BLUEC}Verificando certbot...${NC}";
+        set +e;  # Temporalmente desactivar exit on error
+        certbot_version=$(sudo certbot --version 2>/dev/null)
+        certbot_check_result=$?
+        set -e;  # Reactivar exit on error
+        
+        if [ $certbot_check_result -ne 0 ]; then
+            echo -e "${YELLOWC}⚠${NC} Problema con certbot, reinstalando...";
+            set +e;  # Temporalmente desactivar exit on error
+            sudo apt-get remove -y certbot python3-certbot-nginx;
+            sudo apt-get install -y certbot python3-certbot-nginx;
+            set -e;  # Reactivar exit on error
+        else
+            echo -e "${GREENC}✓${NC} Certbot funcionando correctamente: $certbot_version";
+        fi
+        
         # Crear directorio para verificación
         sudo mkdir -p /var/www/html/.well-known/acme-challenge/
         
         # Obtener certificado SSL
         echo -e "${BLUEC}Solicitando certificado SSL para: ${YELLOWC}$DOMAIN_NAME${NC}";
-        if sudo certbot --nginx -d "$DOMAIN_NAME" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
+        set +e;  # Temporalmente desactivar exit on error
+        sudo certbot --nginx -d "$DOMAIN_NAME" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect;
+        certbot_result=$?
+        set -e;  # Reactivar exit on error
+        
+        if [ $certbot_result -eq 0 ]; then
             echo -e "${GREENC}✓${NC} Certificado SSL instalado correctamente";
             
             # Habilitar X-Sendfile en Odoo tras configurar SSL
@@ -1301,6 +1347,9 @@ EOF
             echo -e "  • El dominio $DOMAIN_NAME apunte a esta IP";
             echo -e "  • Los puertos 80 y 443 estén abiertos";
             echo -e "  • No haya firewalls bloqueando el tráfico";
+            echo -e "  • Las dependencias de certbot estén correctamente instaladas";
+            echo -e "${BLUEC}Puedes intentar manualmente:${NC}";
+            echo -e "  sudo certbot --nginx -d $DOMAIN_NAME --email $SSL_EMAIL --agree-tos --non-interactive --redirect";
         fi
     else
         echo -e "\n${YELLOWC}NOTA${NC}: SSL no configurado. Para habilitarlo usa:";
