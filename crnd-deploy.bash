@@ -131,6 +131,14 @@ DB_USER=${ODOO_DB_USER:-odoo};
 DB_PASSWORD=${ODOO_DB_PASSWORD:-odoo};
 INSTALL_MODE=${INSTALL_MODE:-git};
 
+#--------------------------------------------------
+# Nuevas variables para configuración SSL
+#--------------------------------------------------
+DOMAIN_NAME=${DOMAIN_NAME:-""};
+SSL_EMAIL=${SSL_EMAIL:-""};
+ENABLE_SSL=${ENABLE_SSL:-"no"};
+NGINX_SSL_CONFIG=${NGINX_SSL_CONFIG:-"yes"};
+
 
 #--------------------------------------------------
 # Definir variables de color
@@ -188,6 +196,11 @@ Opciones:
                                Por defecto: $ODOO_WORKERS
     --local-nginx            - instalar nginx local y configurarlo para esta
                                instancia de odoo
+    --domain <domain>        - nombre de dominio para configurar SSL
+                               ejemplo: erp1.tecnosmart.com.ec
+    --email <email>          - email para certificados SSL de Let's Encrypt
+                               ejemplo: admin@tecnosmart.com.ec
+    --enable-ssl             - habilitar configuración automática de SSL con certbot
     --odoo-helper-dev        - Si se establece entonces usar versión dev de odoo-helper
     --install-ua-locales     - Si se establece entonces instalar también uk_UA y ru_RU
                                locales del sistema.
@@ -288,6 +301,17 @@ do
         --local-nginx)
             INSTALL_LOCAL_NGINX=1;
             PROXY_MODE=1;
+        ;;
+        --domain)
+            DOMAIN_NAME=$2;
+            shift;
+        ;;
+        --email)
+            SSL_EMAIL=$2;
+            shift;
+        ;;
+        --enable-ssl)
+            ENABLE_SSL="yes";
         ;;
         --odoo-helper-dev)
             USE_DEV_VERSION_OF_ODOO_HElPER=1;
@@ -453,7 +477,12 @@ ALWAYS_ANSWER_YES=1;
 config_set_defaults;  # importado desde el módulo común
 
 # definir ruta de complementos a colocar en los archivos de configuración
-ADDONS_PATH="$ODOO_PATH/openerp/addons,$ODOO_PATH/odoo/addons,$ODOO_PATH/addons,$ADDONS_DIR";
+# Modernizado para Odoo 18.3 - Crear directorio enterprise y actualizar paths
+sudo mkdir -p $PROJECT_ROOT_DIR/enterprise;
+sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
+
+# Paths modernizados - se elimina openerp/addons (muy antiguo)
+ADDONS_PATH="$ODOO_PATH/addons,$PROJECT_ROOT_DIR/enterprise,$ODOO_PATH/odoo/addons,$ADDONS_DIR";
 INIT_SCRIPT="/etc/init.d/odoo";
 ODOO_PID_FILE="/var/run/odoo.pid";  # ubicación por defecto del archivo pid de odoo
 
@@ -484,26 +513,86 @@ if ! install_odoo_install; then  # importado desde el módulo 'install'
     exit 1;
 fi
 
-# generar archivo de configuración de odoo
-declare -A ODOO_CONF_OPTIONS;
-ODOO_CONF_OPTIONS[addons_path]="$ADDONS_PATH";
-ODOO_CONF_OPTIONS[admin_passwd]="$(random_string 32)";
-ODOO_CONF_OPTIONS[data_dir]="$DATA_DIR";
-ODOO_CONF_OPTIONS[logfile]="$LOG_FILE";
-ODOO_CONF_OPTIONS[db_host]="$DB_HOST";
-ODOO_CONF_OPTIONS[db_port]="False";
-ODOO_CONF_OPTIONS[db_user]="$DB_USER";
-ODOO_CONF_OPTIONS[db_password]="$DB_PASSWORD";
-ODOO_CONF_OPTIONS[workers]=$ODOO_WORKERS;
+# generar archivo de configuración de odoo modernizado para Odoo 18.3
+echo -e "\n${BLUEC}Generando archivo de configuración optimizado para Odoo 18.3...${NC}\n";
 
-# el archivo pid será manejado por el script de inicialización, no por odoo en sí
-ODOO_CONF_OPTIONS[pidfile]="None";
+# Crear archivo de configuración manual con opciones optimizadas
+sudo cat > $ODOO_CONF_FILE << EOF
+[options]
+# Configuración básica
+addons_path = $ADDONS_PATH
+data_dir = $DATA_DIR
+admin_passwd = $(random_string 32)
 
+# Base de datos
+db_host = $DB_HOST
+db_port = False
+db_user = $DB_USER
+db_password = $DB_PASSWORD
+db_maxconn = 64
+
+# Servidor HTTP
+http_enable = True
+http_port = 8069
+gevent_port = 8072
+
+# Workers para producción
+workers = $ODOO_WORKERS
+max_cron_threads = 2
+
+# Logging
+logfile = $LOG_FILE
+log_level = info
+log_db = False
+log_handler = :INFO
+
+# Seguridad
+list_db = False
+EOF
+
+# Agregar configuraciones específicas según el modo
 if [ ! -z $PROXY_MODE ]; then
-    ODOO_CONF_OPTIONS[proxy_mode]="True";
+    echo "proxy_mode = True" >> $ODOO_CONF_FILE;
+    echo "# X-Sendfile deshabilitado inicialmente - habilitar tras configurar Nginx" >> $ODOO_CONF_FILE;
+    echo "x_sendfile = False" >> $ODOO_CONF_FILE;
+else
+    echo "proxy_mode = False" >> $ODOO_CONF_FILE;
+    echo "x_sendfile = False" >> $ODOO_CONF_FILE;
 fi
 
-install_generate_odoo_conf $ODOO_CONF_FILE;   # importado desde el módulo 'install'
+# Agregar configuraciones adicionales para optimización
+cat >> $ODOO_CONF_FILE << EOF
+
+# Optimizaciones de memoria y rendimiento
+limit_memory_hard = 2684354560
+limit_memory_soft = 2147483648
+limit_request = 8192
+limit_time_cpu = 60
+limit_time_real = 120
+limit_time_real_cron = 300
+
+# Configuración de archivos estáticos
+static_http_enable = True
+static_http_document_root = None
+
+# Configuración de email (personalizar según necesidades)
+email_from = False
+smtp_server = localhost
+smtp_port = 25
+smtp_ssl = False
+smtp_user = False
+smtp_password = False
+
+# Configuración de desarrollador (deshabilitado en producción)
+dev_mode = False
+test_enable = False
+without_demo = True
+
+# El archivo PID será manejado por systemd
+pidfile = None
+EOF
+
+echo -e "${GREENC}✓${NC} Archivo de configuración creado: $ODOO_CONF_FILE";
 
 # Escribir configuración del proyecto de odoo-helper
 echo "#---ODOO-INSTANCE-CONFIG---" >> /etc/$CONF_FILE_NAME;
@@ -514,14 +603,19 @@ echo "`config_print`" >> /etc/$CONF_FILE_NAME;
 echo "SERVER_RUN_USER=$ODOO_USER;" >> /etc/$CONF_FILE_NAME;
 
 #--------------------------------------------------
-# Corregir compatibilidad de addons de odoo 9/10
+# Verificar estructura de directorios modernizada para Odoo 18.3
 #--------------------------------------------------
-if [ ! -d $ODOO_PATH/openerp/addons ]; then
-    sudo mkdir -p $ODOO_PATH/openerp/addons;
-fi
 if [ ! -d $ODOO_PATH/odoo/addons ]; then
     sudo mkdir -p $ODOO_PATH/odoo/addons;
 fi
+
+# Verificar que el directorio enterprise fue creado correctamente
+if [ ! -d $PROJECT_ROOT_DIR/enterprise ]; then
+    sudo mkdir -p $PROJECT_ROOT_DIR/enterprise;
+    sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
+fi
+
+echo -e "${GREENC}✓${NC} Estructura de directorios de addons modernizada para Odoo 18.3";
 
 #--------------------------------------------------
 # Crear Usuario Odoo
@@ -576,14 +670,329 @@ EOF
 
 echo -e "\n${GREENC}Odoo instalado!${NC}\n";
 
+#--------------------------------------------------
+# Configuración avanzada de Nginx con SSL
+#--------------------------------------------------
 if [ ! -z $INSTALL_LOCAL_NGINX ]; then
-    echo -e "${BLUEC}Instalando y configurando nginx local..,${NC}";
-    NGINX_CONF_PATH="/etc/nginx/sites-available/$(hostname).conf";
-    sudo apt-get install -qqq -y --no-install-recommends nginx;
-    sudo python3 $NGIX_CONF_GEN \
-        --instance-name="$(hostname -s)" \
-        --frontend-server-name="$(hostname)" > $NGINX_CONF_PATH;
-    echo -e "${GREENC}Nginx parece estar instalado y la configuración por defecto se ha generado. ";
-    echo -e "Mira $NGINX_CONF_PATH para la configuración de nginx.${NC}";
+    echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+    echo -e "${BLUEC}           CONFIGURANDO NGINX CON SSL AUTOMÁTICO                  ${NC}";
+    echo -e "${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+    
+    # Instalar Nginx y Certbot
+    echo -e "${BLUEC}Instalando Nginx y Certbot...${NC}";
+    sudo apt-get install -qqq -y --no-install-recommends nginx certbot python3-certbot-nginx;
+    
+    # Determinar nombre del servidor
+    if [ ! -z "$DOMAIN_NAME" ]; then
+        SERVER_NAME="$DOMAIN_NAME";
+        CONF_NAME="$DOMAIN_NAME";
+    else
+        SERVER_NAME="$(hostname)";
+        CONF_NAME="$(hostname -s)";
+    fi
+    
+    NGINX_CONF_PATH="/etc/nginx/sites-available/$CONF_NAME.conf";
+    
+    echo -e "${BLUEC}Generando configuración de Nginx para: ${YELLOWC}$SERVER_NAME${NC}";
+    
+    # Crear configuración inicial de Nginx optimizada para Odoo 18.3
+    sudo cat > $NGINX_CONF_PATH << EOF
+# Configuración optimizada para Odoo 18.3 con soporte X-Sendfile
+upstream crnd_odoo {
+    server 127.0.0.1:8069 weight=1 fail_timeout=300s;
+    keepalive 32;
+}
+
+upstream crnd_odoo_longpolling {
+    server 127.0.0.1:8072 weight=1 fail_timeout=300s;
+}
+
+# Configuración del mapa de actualización para WebSocket
+map \$http_upgrade \$connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name $SERVER_NAME;
+    
+    # Logs
+    access_log /var/log/nginx/odoo.access.log;
+    error_log /var/log/nginx/odoo.error.log;
+    
+    # Configuración básica de rendimiento
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    
+    # Let's Encrypt verification
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    # Configuración principal de Odoo
+    location / {
+        proxy_pass http://crnd_odoo;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+        
+        # Headers básicos
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
+        
+        # Buffer sizes optimizados
+        proxy_buffers 16 64k;
+        proxy_buffer_size 128k;
+        proxy_busy_buffers_size 256k;
+        proxy_temp_file_write_size 256k;
+        
+        # Timeouts optimizados
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Configuración de cache y buffering
+        proxy_buffering on;
+        proxy_redirect off;
+        
+        # Client settings
+        client_max_body_size 200m;
+        client_body_timeout 300s;
+        
+        # Keep-alive
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+    
+    # Longpolling para chat y notificaciones
+    location /longpolling {
+        proxy_pass http://crnd_odoo_longpolling;
+        
+        # Headers para WebSocket
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
+        
+        # Timeouts para conexiones largas
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 600s;
+        
+        # Sin buffering para tiempo real
+        proxy_buffering off;
+        
+        # Keep-alive para WebSocket
+        proxy_http_version 1.1;
+    }
+    
+    # Cache agresivo para archivos estáticos
+    location /web/static/ {
+        proxy_pass http://crnd_odoo;
+        proxy_cache_valid 200 302 60m;
+        proxy_cache_valid 404 1m;
+        proxy_buffering on;
+        
+        # Headers de cache
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Cache-Status \$upstream_cache_status;
+        
+        # Compresión
+        gzip on;
+        gzip_vary on;
+        gzip_types text/css application/javascript image/svg+xml;
+    }
+    
+    # Manejo de reportes y archivos grandes
+    location ~* ^/web/content/.*\.(pdf|xlsx|docx|zip)$ {
+        proxy_pass http://crnd_odoo;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        client_max_body_size 500m;
+        
+        # Timeouts extendidos para archivos grandes
+        proxy_connect_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+    }
+    
+    # Restricciones de seguridad
+    location ~* ^/(web/database/|xmlrpc|jsonrpc) {
+        # TODO: Restringir acceso desde IPs confiables en producción
+        # allow 192.168.0.0/16;
+        # allow 10.0.0.0/8;
+        # deny all;
+        
+        proxy_pass http://crnd_odoo;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    # Bloquear acceso a archivos sensibles
+    location ~* \.(log|conf|ini)$ {
+        deny all;
+        return 404;
+    }
+}
+EOF
+    
+    # Habilitar sitio
+    sudo ln -sf $NGINX_CONF_PATH /etc/nginx/sites-enabled/
+    sudo rm -f /etc/nginx/sites-enabled/default
+    
+    # Probar configuración
+    if ! sudo nginx -t; then
+        echo -e "${REDC}ERROR${NC}: Configuración de Nginx inválida";
+        exit 1;
+    fi
+    
+    # Reiniciar Nginx
+    sudo systemctl restart nginx;
+    sudo systemctl enable nginx;
+    
+    echo -e "${GREENC}✓${NC} Nginx configurado correctamente";
+    
+    #--------------------------------------------------
+    # Configurar SSL con Let's Encrypt
+    #--------------------------------------------------
+    if [ "$ENABLE_SSL" == "yes" ] && [ ! -z "$DOMAIN_NAME" ] && [ ! -z "$SSL_EMAIL" ]; then
+        echo -e "\n${BLUEC}Configurando SSL con Let's Encrypt...${NC}";
+        
+        # Crear directorio para verificación
+        sudo mkdir -p /var/www/html/.well-known/acme-challenge/
+        
+        # Obtener certificado SSL
+        echo -e "${BLUEC}Solicitando certificado SSL para: ${YELLOWC}$DOMAIN_NAME${NC}";
+        if sudo certbot --nginx -d "$DOMAIN_NAME" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
+            echo -e "${GREENC}✓${NC} Certificado SSL instalado correctamente";
+            
+            # Habilitar X-Sendfile en Odoo tras configurar SSL
+            echo -e "${BLUEC}Habilitando X-Sendfile en configuración de Odoo...${NC}";
+            sudo sed -i 's/x_sendfile = False/x_sendfile = True/' $ODOO_CONF_FILE;
+            
+            # Agregar comentario explicativo
+            sudo sed -i '/x_sendfile = True/a # X-Sendfile habilitado - Nginx configurado con sendfile on' $ODOO_CONF_FILE;
+            
+            # Configurar renovación automática
+            echo -e "${BLUEC}Configurando renovación automática de SSL...${NC}";
+            sudo systemctl enable certbot.timer;
+            sudo systemctl start certbot.timer;
+            
+            echo -e "${GREENC}✓${NC} Renovación automática de SSL configurada";
+            echo -e "${GREENC}✓${NC} X-Sendfile habilitado para mejor rendimiento";
+        else
+            echo -e "${YELLOWC}ADVERTENCIA${NC}: No se pudo obtener el certificado SSL";
+            echo -e "${YELLOWC}Verifica que:${NC}";
+            echo -e "  • El dominio $DOMAIN_NAME apunte a esta IP";
+            echo -e "  • Los puertos 80 y 443 estén abiertos";
+            echo -e "  • No haya firewalls bloqueando el tráfico";
+        fi
+    else
+        echo -e "\n${YELLOWC}NOTA${NC}: SSL no configurado. Para habilitarlo usa:";
+        echo -e "${BLUEC}--domain tu-dominio.com --email tu@email.com --enable-ssl${NC}";
+    fi
+    
+    echo -e "\n${GREENC}════════════════════════════════════════════════════════════════${NC}";
+    echo -e "${GREENC}                   NGINX CONFIGURADO EXITOSAMENTE                   ${NC}";
+    echo -e "${GREENC}════════════════════════════════════════════════════════════════${NC}";
+    echo -e "${BLUEC}Configuración ubicada en:${NC} $NGINX_CONF_PATH";
+    if [ ! -z "$DOMAIN_NAME" ]; then
+        if [ "$ENABLE_SSL" == "yes" ]; then
+            echo -e "${BLUEC}Acceso web:${NC} https://$DOMAIN_NAME";
+        else
+            echo -e "${BLUEC}Acceso web:${NC} http://$DOMAIN_NAME";
+        fi
+    else
+        echo -e "${BLUEC}Acceso web:${NC} http://$(hostname)";
+    fi
 fi
+
+#--------------------------------------------------
+# Crear servicio systemd moderno
+#--------------------------------------------------
+echo -e "\n${BLUEC}Configurando servicio systemd...${NC}";
+
+# Crear archivo de servicio systemd
+sudo cat > /etc/systemd/system/odoo.service << EOF
+[Unit]
+Description=Odoo SaaS 18.3
+Documentation=https://www.odoo.com
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=$ODOO_USER
+Group=$ODOO_USER
+ExecStart=$VENV_DIR/bin/python3 $ODOO_PATH/odoo-bin -c $ODOO_CONF_FILE
+WorkingDirectory=$PROJECT_ROOT_DIR
+StandardOutput=journal+console
+StandardError=journal+console
+SyslogIdentifier=odoo
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=$DATA_DIR $LOG_DIR /tmp
+
+# Environment
+Environment=PATH=$VENV_DIR/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Recargar systemd y habilitar servicio
+sudo systemctl daemon-reload;
+sudo systemctl enable odoo.service;
+
+echo -e "${GREENC}✓${NC} Servicio systemd configurado y habilitado";
+
+#--------------------------------------------------
+# Resumen final de instalación
+#--------------------------------------------------
+echo -e "\n${GREENC}════════════════════════════════════════════════════════════════${NC}";
+echo -e "${GREENC}              INSTALACIÓN COMPLETADA EXITOSAMENTE                  ${NC}";
+echo -e "${GREENC}════════════════════════════════════════════════════════════════${NC}";
+echo -e "${BLUEC}Odoo instalado en:${NC} $PROJECT_ROOT_DIR";
+echo -e "${BLUEC}Usuario Odoo:${NC} $ODOO_USER";
+echo -e "${BLUEC}Base de datos:${NC} PostgreSQL (Usuario: $DB_USER)";
+echo -e "${BLUEC}Archivo de configuración:${NC} $ODOO_CONF_FILE";
+echo -e "${BLUEC}Logs:${NC} $LOG_FILE";
+echo -e "${BLUEC}Workers configurados:${NC} $ODOO_WORKERS";
+
+if [ ! -z "$DOMAIN_NAME" ]; then
+    if [ "$ENABLE_SSL" == "yes" ]; then
+        echo -e "${BLUEC}URL de acceso:${NC} https://$DOMAIN_NAME";
+    else
+        echo -e "${BLUEC}URL de acceso:${NC} http://$DOMAIN_NAME";
+    fi
+else
+    echo -e "${BLUEC}URL de acceso:${NC} http://$(hostname)";
+fi
+
+echo -e "\n${BLUEC}Comandos útiles:${NC}";
+echo -e "  • Iniciar Odoo: ${YELLOWC}sudo systemctl start odoo${NC}";
+echo -e "  • Detener Odoo: ${YELLOWC}sudo systemctl stop odoo${NC}";
+echo -e "  • Reiniciar Odoo: ${YELLOWC}sudo systemctl restart odoo${NC}";
+echo -e "  • Ver estado: ${YELLOWC}sudo systemctl status odoo${NC}";
+echo -e "  • Ver logs: ${YELLOWC}sudo journalctl -u odoo -f${NC}";
+
+echo -e "\n${GREENC}¡Instalación lista para producción!${NC}\n";
 
