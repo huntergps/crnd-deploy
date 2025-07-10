@@ -54,10 +54,69 @@ WORKDIR=`pwd`;
 CRND_DEPLOY_VERSION="1.0.0"
 
 #--------------------------------------------------
-# Valores por defecto
+# Valores por defecto - Solo Odoo 17+ soportado
 #--------------------------------------------------
 DEFAULT_ODOO_BRANCH=saas-18.3
 DEFAULT_ODOO_VERSION=saas-18.3
+MINIMUM_SUPPORTED_VERSION=17.0
+
+#--------------------------------------------------
+# Validar versión de Odoo - Solo 17+ permitido
+#--------------------------------------------------
+function validate_odoo_version {
+    local version=$1;
+    
+    # Extraer versión numérica
+    local numeric_version;
+    if [[ "$version" == saas-* ]]; then
+        # Para versiones SaaS como saas-18.1, saas-18.2, saas-18.3
+        numeric_version="${version#saas-}";
+    else
+        # Para versiones estándar como 17.0, 18.0
+        numeric_version="$version";
+    fi
+    
+    # Convertir a formato comparable (17.0 -> 1700, 18.3 -> 1830)
+    local major;
+    local minor;
+    if [[ "$numeric_version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+        major="${BASH_REMATCH[1]}";
+        minor="${BASH_REMATCH[2]}";
+    elif [[ "$numeric_version" =~ ^([0-9]+)$ ]]; then
+        major="$numeric_version";
+        minor="0";
+    else
+        echo -e "${REDC}ERROR${NC}: Formato de versión inválido: $version";
+        echo -e "${YELLOWC}Versiones soportadas: 17.0, 18.0, saas-18.1, saas-18.2, saas-18.3, etc.${NC}";
+        return 1;
+    fi
+    
+    local version_number=$((major * 100 + minor));
+    local min_version_number=1700; # 17.0
+    
+    if [ "$version_number" -lt "$min_version_number" ]; then
+        echo -e "${REDC}ERROR${NC}: Versión de Odoo ${YELLOWC}$version${NC} no soportada.";
+        echo -e "${YELLOWC}Este script solo soporta Odoo 17.0 o superior.${NC}";
+        echo -e "${BLUEC}Razones:${NC}";
+        echo -e "  • Python 3.8+ requerido (Ubuntu 22.04+)";
+        echo -e "  • Arquitectura moderna de Odoo";
+        echo -e "  • Dependencias actualizadas";
+        echo -e "${YELLOWC}Versiones soportadas: 17.0, 18.0, saas-18.1, saas-18.2, saas-18.3${NC}";
+        return 1;
+    fi
+    
+    # Validar que tenemos Python 3.8+ para Odoo 17+
+    if ! python3 -c "import sys; assert sys.version_info >= (3, 8), 'Python 3.8+ requerido para Odoo 17+'" 2>/dev/null; then
+        echo -e "${REDC}ERROR${NC}: Python 3.8+ es requerido para Odoo 17+";
+        echo -e "${YELLOWC}Tu versión actual: $(python3 --version)${NC}";
+        echo -e "${BLUEC}Instala Python 3.8+ o usa Ubuntu 22.04+${NC}";
+        return 1;
+    fi
+    
+    echo -e "${GREENC}✓${NC} Versión de Odoo ${YELLOWC}$version${NC} soportada";
+    return 0;
+}
+
 #--------------------------------------------------
 # Analizar variables de entorno
 #--------------------------------------------------
@@ -175,6 +234,11 @@ do
         --odoo-version)
             ODOO_VERSION=$2;
             shift;
+            
+            # Validar versión antes de continuar
+            if ! validate_odoo_version "$ODOO_VERSION"; then
+                exit 1;
+            fi
 
             if [ "$ODOO_VERSION" != "$DEFAULT_ODOO_VERSION" ] && [ "$ODOO_BRANCH" == "$DEFAULT_ODOO_BRANCH" ]; then
                 ODOO_BRANCH=$ODOO_VERSION;
@@ -253,6 +317,16 @@ done;
 set -e;   # fail on errors
 
 #--------------------------------------------------
+# Validar configuración inicial
+#--------------------------------------------------
+echo -e "\n${BLUEC}Validando configuración de Odoo...${NC}\n";
+
+# Validar versión por defecto al inicio
+if ! validate_odoo_version "$ODOO_VERSION"; then
+    exit 1;
+fi
+
+#--------------------------------------------------
 # Actualizar Servidor y Instalar Dependencias
 #--------------------------------------------------
 echo -e "\n${BLUEC}Actualizar Servidor...${NC}\n";
@@ -262,21 +336,46 @@ echo -e "\n${BLUEC}Instalando dependencias básicas...${NC}\n";
 sudo apt-get install -qqq -y \
     wget locales software-properties-common;
 
-# Instalar Python 3.10+ para Odoo 18.3
-echo -e "\n${BLUEC}Instalando Python 3.10+...${NC}\n";
-sudo add-apt-repository ppa:deadsnakes/ppa -y;
-sudo apt-get update -qq;
-sudo apt-get install -qqq -y python3.10 python3.10-dev python3.10-venv python3.10-distutils;
+# Instalar Python 3.8+ para Odoo 17+
+echo -e "\n${BLUEC}Verificando e instalando Python 3.8+...${NC}\n";
 
-# Crear enlace simbólico para python3.10 como python3
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1;
-sudo update-alternatives --config python3;
+# Verificar Python actual
+CURRENT_PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+echo -e "${BLUEC}Python actual: ${YELLOWC}$CURRENT_PYTHON_VERSION${NC}";
 
-# Verificar versión de Python para Odoo 18.3
-echo -e "\n${BLUEC}Verificando versión de Python...${NC}\n";
+# Determinar qué versión de Python instalar basado en la versión de Odoo
+local odoo_major;
+if [[ "$ODOO_VERSION" == saas-* ]]; then
+    odoo_major="${ODOO_VERSION#saas-}";
+    odoo_major="${odoo_major%.*}";
+else
+    odoo_major="${ODOO_VERSION%.*}";
+fi
+
+# Instalar Python apropiado según la versión de Odoo
+if [ "$odoo_major" -ge 18 ]; then
+    # Odoo 18+ requiere Python 3.10+
+    if ! python3 -c "import sys; assert sys.version_info >= (3, 10)" 2>/dev/null; then
+        echo -e "${BLUEC}Instalando Python 3.10+ para Odoo 18+...${NC}";
+        sudo add-apt-repository ppa:deadsnakes/ppa -y;
+        sudo apt-get update -qq;
+        sudo apt-get install -qqq -y python3.10 python3.10-dev python3.10-venv python3.10-distutils;
+        sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1;
+    fi
+elif [ "$odoo_major" -eq 17 ]; then
+    # Odoo 17 requiere Python 3.8+
+    if ! python3 -c "import sys; assert sys.version_info >= (3, 8)" 2>/dev/null; then
+        echo -e "${BLUEC}Instalando Python 3.8+ para Odoo 17...${NC}";
+        # Ubuntu 22.04 ya tiene Python 3.10 por defecto
+        sudo apt-get install -qqq -y python3 python3-dev python3-venv python3-distutils;
+    fi
+fi
+
+# Verificar versión final de Python
+echo -e "\n${BLUEC}Verificando versión final de Python...${NC}\n";
 python3 --version;
-if ! python3 -c "import sys; assert sys.version_info >= (3, 10), 'Python 3.10+ requerido para Odoo 18.3'" 2>/dev/null; then
-    echo -e "${REDC}ERROR${NC}: Python 3.10+ es requerido para Odoo 18.3";
+if ! python3 -c "import sys; assert sys.version_info >= (3, 8), 'Python 3.8+ requerido para Odoo 17+'" 2>/dev/null; then
+    echo -e "${REDC}ERROR${NC}: Python 3.8+ es requerido para Odoo 17+";
     exit 1;
 fi
 
