@@ -9,18 +9,6 @@ Además, este script soporta la instalación automática de
 [PostgreSQL](https://www.postgresql.org/) y
 [Nginx](https://nginx.org/en/) en la misma máquina.
 
-## Yodoo Cockpit
-
-[![Yodoo Cockpit](https://crnd.pro/web/image/18846/banner_2_4_gif_animation_cut.gif)](https://crnd.pro/yodoo-cockpit)
-
-Echa un vistazo al proyecto [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit) y descubre la forma más fácil de gestionar tu instalación de Odoo.
-Solo notas breves sobre [Yodoo Cockpit](https://crnd.pro/yodoo-cockpit):
-- iniciar una nueva instancia de Odoo lista para producción en 1-2 minutos.
-- agregar complementos personalizados a tus instancias de Odoo en 5-10 minutos.
-- configuración de correo electrónico lista para usar: solo presiona un botón y agrega algunos registros a tu DNS, y obtén un correo electrónico funcional
-- hacer tu instancia de Odoo disponible para el mundo externo (internet) en 30 segundos (solo agrega un registro en tu DNS)
-
-Si tienes alguna pregunta, contáctanos en [info@crnd.pro](mailto:info@crnd.pro), para que podamos programar una demostración en línea.
 
 ## Requisitos de CRND-Deploy
 
