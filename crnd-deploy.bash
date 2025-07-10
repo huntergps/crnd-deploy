@@ -569,9 +569,6 @@ else
     echo -e "\n${YELLOWC}El usuario Odoo ya existe, usando el.${NC}\n";
 fi
 
-# Ahora que el usuario existe, podemos cambiar propietarios
-sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
-
 #--------------------------------------------------
 # Instalar Odoo
 #--------------------------------------------------
@@ -645,7 +642,8 @@ config_set_defaults;  # importado desde el módulo común
 # definir ruta de complementos a colocar en los archivos de configuración
 # Modernizado para Odoo 18.3 - Crear directorio enterprise y actualizar paths
 sudo mkdir -p $PROJECT_ROOT_DIR/enterprise;
-# Nota: chown se hará después de crear el usuario odoo
+# Corregir propietario del directorio enterprise
+sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
 
 # Paths modernizados - se elimina openerp/addons (muy antiguo)
 ADDONS_PATH="$ODOO_PATH/addons,$PROJECT_ROOT_DIR/enterprise,$ODOO_PATH/odoo/addons,$ADDONS_DIR";
@@ -809,6 +807,14 @@ fi
 if [ ! -d $PROJECT_ROOT_DIR/enterprise ]; then
     sudo mkdir -p $PROJECT_ROOT_DIR/enterprise;
     sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
+    echo -e "${BLUEC}Directorio enterprise creado: ${YELLOWC}$PROJECT_ROOT_DIR/enterprise${NC}";
+else
+    # Verificar que el propietario es correcto
+    local enterprise_owner=$(stat -c '%U' $PROJECT_ROOT_DIR/enterprise 2>/dev/null || echo "unknown");
+    if [ "$enterprise_owner" != "$ODOO_USER" ]; then
+        sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
+        echo -e "${BLUEC}Propietario del directorio enterprise corregido${NC}";
+    fi
 fi
 
 echo -e "${GREENC}✓${NC} Estructura de directorios de addons modernizada para Odoo 18.3";
@@ -870,6 +876,112 @@ sudo chmod 750 $DATA_DIR;
 sudo chmod 755 $ADDONS_DIR;
 
 echo -e "${GREENC}✓${NC} Permisos corregidos";
+
+#--------------------------------------------------
+# VERIFICACIÓN AUTOMÁTICA DE INSTALACIÓN
+#--------------------------------------------------
+echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+echo -e "${BLUEC}           VERIFICACIÓN AUTOMÁTICA DE INSTALACIÓN                ${NC}";
+echo -e "${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+
+# Verificar directorios críticos
+echo -e "${BLUEC}Verificando estructura de directorios...${NC}";
+declare -a critical_dirs=(
+    "$PROJECT_ROOT_DIR"
+    "$PROJECT_ROOT_DIR/enterprise"
+    "$PROJECT_ROOT_DIR/odoo"
+    "$PROJECT_ROOT_DIR/venv"
+    "$PROJECT_ROOT_DIR/logs"
+    "$PROJECT_ROOT_DIR/data"
+    "$PROJECT_ROOT_DIR/custom_addons"
+)
+
+local missing_dirs=0;
+for dir in "${critical_dirs[@]}"; do
+    if [ -d "$dir" ]; then
+        echo -e "  ${GREENC}✓${NC} $dir";
+    else
+        echo -e "  ${REDC}✗${NC} $dir (NO EXISTE)";
+        ((missing_dirs++));
+    fi
+done
+
+# Verificar usuario odoo
+echo -e "\n${BLUEC}Verificando usuario odoo...${NC}";
+if getent passwd $ODOO_USER > /dev/null; then
+    echo -e "  ${GREENC}✓${NC} Usuario $ODOO_USER existe";
+else
+    echo -e "  ${REDC}✗${NC} Usuario $ODOO_USER NO EXISTE";
+    ((missing_dirs++));
+fi
+
+# Verificar pyOpenSSL
+echo -e "\n${BLUEC}Verificando pyOpenSSL...${NC}";
+if [ -d "$VENV_DIR" ]; then
+    if "$VENV_DIR/bin/python3" -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>/dev/null; then
+        local openssl_version=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print(OpenSSL.__version__)" 2>/dev/null);
+        echo -e "  ${GREENC}✓${NC} pyOpenSSL instalado: $openssl_version";
+        
+        if [[ "$openssl_version" == "21.0.0" ]]; then
+            echo -e "  ${GREENC}✓${NC} Versión correcta (21.0.0)";
+        else
+            echo -e "  ${YELLOWC}⚠${NC} Versión diferente a 21.0.0: $openssl_version";
+        fi
+    else
+        echo -e "  ${REDC}✗${NC} pyOpenSSL NO FUNCIONA";
+        ((missing_dirs++));
+    fi
+else
+    echo -e "  ${REDC}✗${NC} Entorno virtual no existe";
+    ((missing_dirs++));
+fi
+
+# Verificar PostgreSQL
+echo -e "\n${BLUEC}Verificando PostgreSQL...${NC}";
+if command -v psql >/dev/null 2>&1; then
+    echo -e "  ${GREENC}✓${NC} PostgreSQL instalado";
+    
+    if systemctl is-active --quiet postgresql; then
+        echo -e "  ${GREENC}✓${NC} Servicio PostgreSQL activo";
+    else
+        echo -e "  ${YELLOWC}⚠${NC} Servicio PostgreSQL inactivo";
+    fi
+    
+    if sudo -u postgres psql -c "\du odoo" 2>/dev/null | grep -q odoo; then
+        echo -e "  ${GREENC}✓${NC} Usuario PostgreSQL 'odoo' existe";
+    else
+        echo -e "  ${REDC}✗${NC} Usuario PostgreSQL 'odoo' NO EXISTE";
+        ((missing_dirs++));
+    fi
+else
+    echo -e "  ${REDC}✗${NC} PostgreSQL NO INSTALADO";
+    ((missing_dirs++));
+fi
+
+# Verificar servicio Odoo
+echo -e "\n${BLUEC}Verificando servicio Odoo...${NC}";
+if [ -f "/etc/init.d/odoo" ]; then
+    echo -e "  ${GREENC}✓${NC} Script de servicio existe";
+else
+    echo -e "  ${REDC}✗${NC} Script de servicio NO EXISTE";
+    ((missing_dirs++));
+fi
+
+# Resumen de verificación
+echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+echo -e "${BLUEC}                    RESUMEN DE VERIFICACIÓN                      ${NC}";
+echo -e "${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+
+if [ $missing_dirs -eq 0 ]; then
+    echo -e "${GREENC}✓${NC} Instalación completada exitosamente";
+    echo -e "${GREENC}✓${NC} Todos los componentes verificados correctamente";
+else
+    echo -e "${REDC}✗${NC} Se detectaron $missing_dirs problema(s) en la instalación";
+    echo -e "${YELLOWC}Recomendaciones:${NC}";
+    echo -e "  • Ejecutar: ${BLUEC}sudo odoo-helper install fix-python-deps${NC}";
+    echo -e "  • Verificar logs: ${BLUEC}sudo journalctl -u odoo -f${NC}";
+    echo -e "  • Reiniciar servicio: ${BLUEC}sudo systemctl restart odoo${NC}";
+fi
 
 echo -e "\n${GREENC}Odoo instalado!${NC}\n";
 
