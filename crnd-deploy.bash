@@ -554,6 +554,20 @@ if [ ! -z $INSTALL_LOCAL_POSTGRES ]; then
 fi
 
 #--------------------------------------------------
+# Crear Usuario Odoo (movido antes de la instalación)
+#--------------------------------------------------
+if ! getent passwd $ODOO_USER  > /dev/null; then
+    echo -e "\n${BLUEC}Creando usuario Odoo: $ODOO_USER ${NC}\n";
+    sudo adduser --system --no-create-home --home $PROJECT_ROOT_DIR \
+        --quiet --group $ODOO_USER;
+else
+    echo -e "\n${YELLOWC}El usuario Odoo ya existe, usando el.${NC}\n";
+fi
+
+# Ahora que el usuario existe, podemos cambiar propietarios
+sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
+
+#--------------------------------------------------
 # Instalar Odoo
 #--------------------------------------------------
 echo -e "\n${BLUEC}Instalando odoo...${NC}\n";
@@ -626,7 +640,7 @@ config_set_defaults;  # importado desde el módulo común
 # definir ruta de complementos a colocar en los archivos de configuración
 # Modernizado para Odoo 18.3 - Crear directorio enterprise y actualizar paths
 sudo mkdir -p $PROJECT_ROOT_DIR/enterprise;
-sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
+# Nota: chown se hará después de crear el usuario odoo
 
 # Paths modernizados - se elimina openerp/addons (muy antiguo)
 ADDONS_PATH="$ODOO_PATH/addons,$PROJECT_ROOT_DIR/enterprise,$ODOO_PATH/odoo/addons,$ADDONS_DIR";
@@ -764,16 +778,7 @@ fi
 
 echo -e "${GREENC}✓${NC} Estructura de directorios de addons modernizada para Odoo 18.3";
 
-#--------------------------------------------------
-# Crear Usuario Odoo
-#--------------------------------------------------
-if ! getent passwd $ODOO_USER  > /dev/null; then
-    echo -e "\n${BLUEC}Creando usuario Odoo: $ODOO_USER ${NC}\n";
-    sudo adduser --system --no-create-home --home $PROJECT_ROOT_DIR \
-        --quiet --group $ODOO_USER;
-else
-    echo -e "\n${YELLOWC}El usuario Odoo ya existe, usando el.${NC}\n";
-fi
+
 
 #--------------------------------------------------
 # Crear Script de Inicialización
