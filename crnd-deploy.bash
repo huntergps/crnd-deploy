@@ -440,8 +440,72 @@ if ! command -v odoo-helper >/dev/null 2>&1; then
     odoo-helper --version;
 fi
 
+# Verificar que odoo-helper se instaló correctamente y está en PATH
+echo -e "${BLUEC}Verificando instalación de odoo-helper...${NC}";
+
+# Intentar recargar el PATH
+if [ -f "/etc/odoo-helper.conf" ]; then
+    source /etc/odoo-helper.conf
+fi
+
+# Agregar rutas comunes donde podría estar odoo-helper
+export PATH="/usr/local/bin:/opt/odoo-helper-scripts/bin:$PATH"
+
+# Verificar nuevamente si odoo-helper está disponible
+if ! command -v odoo-helper >/dev/null 2>&1; then
+    echo -e "${REDC}ERROR${NC}: odoo-helper aún no está disponible después de la instalación.";
+    echo -e "${YELLOWC}Verificando rutas posibles...${NC}";
+    
+    # Verificar ubicaciones comunes
+    if [ -f "/usr/local/bin/odoo-helper" ]; then
+        echo -e "${BLUEC}Encontrado en /usr/local/bin/odoo-helper${NC}";
+        export PATH="/usr/local/bin:$PATH"
+    elif [ -f "/opt/odoo-helper-scripts/bin/odoo-helper" ]; then
+        echo -e "${BLUEC}Encontrado en /opt/odoo-helper-scripts/bin/odoo-helper${NC}";
+        export PATH="/opt/odoo-helper-scripts/bin:$PATH"
+    else
+        echo -e "${REDC}ERROR CRÍTICO${NC}: No se pudo encontrar odoo-helper después de la instalación.";
+        echo -e "${YELLOWC}Intentando reinstalar...${NC}";
+        
+        # Limpiar instalación previa
+        rm -rf /opt/odoo-helper-scripts 2>/dev/null || true
+        rm -f /usr/local/bin/odoo-helper* 2>/dev/null || true
+        rm -f /etc/odoo-helper.conf 2>/dev/null || true
+        
+        # Reinstalar
+        if ! wget -q -T 10 -O /tmp/odoo-helper-install.bash \
+                https://raw.githubusercontent.com/huntergps/odoo-helper-scripts/master/install-system.bash; then
+            echo "${REDC}ERROR${NC}: No se pudo descargar el instalador. Verifica tu conexión.";
+            exit 1;
+        fi
+        
+        sudo bash /tmp/odoo-helper-install.bash master;
+        
+        # Verificar después de reinstalación
+        if [ -f "/etc/odoo-helper.conf" ]; then
+            source /etc/odoo-helper.conf
+        fi
+        export PATH="/usr/local/bin:/opt/odoo-helper-scripts/bin:$PATH"
+        
+        if ! command -v odoo-helper >/dev/null 2>&1; then
+            echo -e "${REDC}ERROR CRÍTICO${NC}: No se pudo instalar odoo-helper correctamente.";
+            echo -e "${YELLOWC}Esto es necesario para continuar la instalación.${NC}";
+            echo -e "${BLUEC}Intenta instalar manualmente:${NC}";
+            echo -e "wget -O /tmp/install.bash https://raw.githubusercontent.com/huntergps/odoo-helper-scripts/master/install-system.bash";
+            echo -e "sudo bash /tmp/install.bash";
+            exit 1;
+        fi
+    fi
+fi
+
+echo -e "${GREENC}✓${NC} odoo-helper está disponible: $(which odoo-helper)";
+echo -e "${BLUEC}Versión:${NC} $(odoo-helper --version)";
+
 # Instalar pre-requisitos de odoo
+echo -e "\n${BLUEC}Instalando pre-requisitos del sistema...${NC}";
 sudo odoo-helper install pre-requirements -y;
+
+echo -e "\n${BLUEC}Instalando dependencias específicas para Odoo ${ODOO_VERSION}...${NC}";
 sudo odoo-helper install sys-deps -y --branch "$ODOO_BRANCH" "$ODOO_VERSION";
 
 if [ ! -z $INSTALL_LOCAL_POSTGRES ]; then
@@ -463,8 +527,22 @@ fi
 # Instalar Odoo
 #--------------------------------------------------
 echo -e "\n${BLUEC}Instalando odoo...${NC}\n";
+
+# Verificar que odoo-helper funciona antes de importar librerías
+echo -e "${BLUEC}Verificando funcionalidad de odoo-helper...${NC}";
+if ! odoo-helper --version >/dev/null 2>&1; then
+    echo -e "${REDC}ERROR${NC}: odoo-helper no funciona correctamente.";
+    exit 1;
+fi
+
 # importar módulo común de odoo-helper, que contiene algunas funciones útiles
-source $(odoo-helper system lib-path common);
+echo -e "${BLUEC}Importando librerías de odoo-helper...${NC}";
+LIB_PATH=$(odoo-helper system lib-path common)
+if [ ! -f "$LIB_PATH" ]; then
+    echo -e "${REDC}ERROR${NC}: No se pudo encontrar las librerías de odoo-helper: $LIB_PATH";
+    exit 1;
+fi
+source "$LIB_PATH";
 
 # importar bibliotecas de odoo-helper
 ohelper_require 'install';
