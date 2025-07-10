@@ -293,9 +293,14 @@ do
             PROXY_MODE=1;
         ;;
         --local-postgres)
-            # Generar contraseña aleatoria para la base de datos
             DB_HOST="localhost";
-            DB_PASSWORD="$(< /dev/urandom tr -dc A-Za-z0-9 | head -c 32)";
+            # Solo usar contraseña por defecto si no se especificó --db-password
+            if [ -z "$DB_PASSWORD" ]; then
+                DB_PASSWORD="Odoo123";
+                echo -e "${BLUEC}Usando contraseña por defecto PostgreSQL: ${YELLOWC}$DB_PASSWORD${NC}";
+            else
+                echo -e "${BLUEC}Usando contraseña PostgreSQL especificada: ${YELLOWC}$DB_PASSWORD${NC}";
+            fi
             INSTALL_LOCAL_POSTGRES=1;
         ;;
         --local-nginx)
@@ -674,6 +679,36 @@ if ! install_odoo_install; then  # importado desde el módulo 'install'
     exit 1;
 fi
 
+#--------------------------------------------------
+# CORRECCIÓN AUTOMÁTICA DE DEPENDENCIAS PYTHON PARA ODOO 18.3
+#--------------------------------------------------
+echo -e "\n${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+echo -e "${BLUEC}           CORRIGIENDO DEPENDENCIAS PYTHON                        ${NC}";
+echo -e "${BLUEC}═══════════════════════════════════════════════════════════════${NC}";
+
+# Activar entorno virtual
+echo -e "${BLUEC}Activando entorno virtual...${NC}";
+source $VENV_DIR/bin/activate;
+
+# Corregir pyOpenSSL para Python 3.10
+echo -e "${BLUEC}Corrigiendo pyOpenSSL para Python 3.10...${NC}";
+sudo $VENV_DIR/bin/pip uninstall -y pyOpenSSL;
+sudo $VENV_DIR/bin/pip install pyOpenSSL==21.0.0;
+
+# Verificar que la corrección funcionó
+if $VENV_DIR/bin/python3 -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>/dev/null; then
+    echo -e "${GREENC}✓${NC} pyOpenSSL corregido exitosamente";
+else
+    echo -e "${REDC}✗${NC} Error al corregir pyOpenSSL";
+    echo -e "${YELLOWC}Continuando con instalación...${NC}";
+fi
+
+# Corregir permisos del entorno virtual
+echo -e "${BLUEC}Corrigiendo permisos del entorno virtual...${NC}";
+sudo chmod -R a+rwX $VENV_DIR;
+
+echo -e "${GREENC}✓${NC} Dependencias de Python corregidas para Odoo 18.3";
+
 # generar archivo de configuración de odoo modernizado para Odoo 18.3
 echo -e "\n${BLUEC}Generando archivo de configuración optimizado para Odoo 18.3...${NC}\n";
 
@@ -819,6 +854,22 @@ $LOG_DIR/*.log {
     notifempty
 }
 EOF
+
+#--------------------------------------------------
+# CORRECCIÓN FINAL DE PERMISOS
+#--------------------------------------------------
+echo -e "\n${BLUEC}Aplicando correcciones finales de permisos...${NC}";
+
+# Permisos del entorno virtual
+sudo chmod -R a+rwX $VENV_DIR;
+
+# Permisos de directorios críticos
+sudo chown -R $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR;
+sudo chmod 750 $LOG_DIR;
+sudo chmod 750 $DATA_DIR;
+sudo chmod 755 $ADDONS_DIR;
+
+echo -e "${GREENC}✓${NC} Permisos corregidos";
 
 echo -e "\n${GREENC}Odoo instalado!${NC}\n";
 
