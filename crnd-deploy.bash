@@ -928,13 +928,18 @@ if [ -d "$VENV_DIR" ]; then
         echo -e "  ${BLUEC}Python encontrado en entorno virtual${NC}";
         
         # Verificar que pyOpenSSL está instalado en el entorno virtual
+        set +e;  # Temporalmente desactivar exit on error
         pip_list_output=$("$VENV_DIR/bin/pip" list 2>/dev/null | grep "pyOpenSSL" || echo "");
+        set -e;  # Reactivar exit on error
         if [ ! -z "$pip_list_output" ]; then
             echo -e "  ${BLUEC}pyOpenSSL encontrado en pip list${NC}";
             
             # Intentar importar OpenSSL directamente (solo para mostrar versión)
+            set +e;  # Temporalmente desactivar exit on error
             openssl_test_output=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>&1);
-            if [ $? -eq 0 ]; then
+            openssl_exit_code=$?;
+            set -e;  # Reactivar exit on error
+            if [ $openssl_exit_code -eq 0 ]; then
                 openssl_version=$(echo "$openssl_test_output" | grep "pyOpenSSL version:" | cut -d':' -f2 | xargs);
                 echo -e "  ${GREENC}✓${NC} pyOpenSSL instalado: $openssl_version";
                 
@@ -968,24 +973,37 @@ echo -e "\n${BLUEC}Verificando PostgreSQL...${NC}";
 if command -v psql >/dev/null 2>&1; then
     echo -e "  ${GREENC}✓${NC} PostgreSQL instalado";
     
-    if systemctl is-active --quiet postgresql; then
+    set +e;  # Temporalmente desactivar exit on error
+    postgres_active=$(systemctl is-active --quiet postgresql; echo $?);
+    set -e;  # Reactivar exit on error
+    if [ $postgres_active -eq 0 ]; then
         echo -e "  ${GREENC}✓${NC} Servicio PostgreSQL activo";
     else
         echo -e "  ${YELLOWC}⚠${NC} Servicio PostgreSQL inactivo";
         echo -e "  ${BLUEC}Intentando iniciar PostgreSQL...${NC}";
+        set +e;  # Temporalmente desactivar exit on error
         sudo systemctl start postgresql 2>/dev/null || echo -e "  ${YELLOWC}No se pudo iniciar PostgreSQL${NC}";
+        set -e;  # Reactivar exit on error
     fi
     
     echo -e "  ${BLUEC}Verificando usuario PostgreSQL 'odoo'...${NC}";
-    if sudo -u postgres psql -c "\du odoo" 2>/dev/null | grep -q odoo; then
+    set +e;  # Temporalmente desactivar exit on error
+    postgres_user_check=$(sudo -u postgres psql -c "\du odoo" 2>/dev/null | grep -q odoo; echo $?);
+    set -e;  # Reactivar exit on error
+    if [ $postgres_user_check -eq 0 ]; then
         echo -e "  ${GREENC}✓${NC} Usuario PostgreSQL 'odoo' existe";
     else
         echo -e "  ${REDC}✗${NC} Usuario PostgreSQL 'odoo' NO EXISTE";
         echo -e "  ${BLUEC}Intentando crear usuario PostgreSQL 'odoo'...${NC}";
-        if sudo -u postgres createuser --createdb --no-createrole --no-superuser odoo 2>/dev/null; then
+        set +e;  # Temporalmente desactivar exit on error
+        postgres_create_result=$(sudo -u postgres createuser --createdb --no-createrole --no-superuser odoo 2>/dev/null; echo $?);
+        set -e;  # Reactivar exit on error
+        if [ $postgres_create_result -eq 0 ]; then
             echo -e "  ${GREENC}✓${NC} Usuario PostgreSQL 'odoo' creado exitosamente";
             if [ ! -z "$DB_PASSWORD" ]; then
+                set +e;  # Temporalmente desactivar exit on error
                 sudo -u postgres psql -c "ALTER USER odoo PASSWORD '$DB_PASSWORD';" 2>/dev/null;
+                set -e;  # Reactivar exit on error
                 echo -e "  ${GREENC}✓${NC} Contraseña configurada para usuario 'odoo'";
             fi
         else
@@ -996,11 +1014,15 @@ if command -v psql >/dev/null 2>&1; then
 else
     echo -e "  ${REDC}✗${NC} PostgreSQL NO INSTALADO";
     echo -e "  ${BLUEC}Intentando instalar PostgreSQL...${NC}";
+    set +e;  # Temporalmente desactivar exit on error
     sudo apt-get install -qqq -y postgresql postgresql-contrib;
+    set -e;  # Reactivar exit on error
     if command -v psql >/dev/null 2>&1; then
         echo -e "  ${GREENC}✓${NC} PostgreSQL instalado exitosamente";
+        set +e;  # Temporalmente desactivar exit on error
         sudo systemctl start postgresql;
         sudo systemctl enable postgresql;
+        set -e;  # Reactivar exit on error
     else
         echo -e "  ${REDC}✗${NC} No se pudo instalar PostgreSQL";
         ((missing_dirs++));
@@ -1041,6 +1063,9 @@ echo -e "${BLUEC}Continuando con configuración de servicios...${NC}";
 echo -e "${BLUEC}DEBUG: missing_dirs = $missing_dirs${NC}";
 echo -e "${BLUEC}DEBUG: INSTALL_LOCAL_NGINX = $INSTALL_LOCAL_NGINX${NC}";
 echo -e "${BLUEC}DEBUG: Verificación completada, continuando con servicios...${NC}";
+
+# Asegurar que continuamos independientemente de los problemas de verificación
+echo -e "${BLUEC}DEBUG: Forzando continuación del script después de verificación...${NC}";
 
 #--------------------------------------------------
 # Configuración avanzada de Nginx con SSL
