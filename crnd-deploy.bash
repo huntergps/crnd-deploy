@@ -973,17 +973,39 @@ if command -v psql >/dev/null 2>&1; then
         echo -e "  ${GREENC}✓${NC} Servicio PostgreSQL activo";
     else
         echo -e "  ${YELLOWC}⚠${NC} Servicio PostgreSQL inactivo";
+        echo -e "  ${BLUEC}Intentando iniciar PostgreSQL...${NC}";
+        sudo systemctl start postgresql 2>/dev/null || echo -e "  ${YELLOWC}No se pudo iniciar PostgreSQL${NC}";
     fi
     
+    echo -e "  ${BLUEC}Verificando usuario PostgreSQL 'odoo'...${NC}";
     if sudo -u postgres psql -c "\du odoo" 2>/dev/null | grep -q odoo; then
         echo -e "  ${GREENC}✓${NC} Usuario PostgreSQL 'odoo' existe";
     else
         echo -e "  ${REDC}✗${NC} Usuario PostgreSQL 'odoo' NO EXISTE";
-        ((missing_dirs++));
+        echo -e "  ${BLUEC}Intentando crear usuario PostgreSQL 'odoo'...${NC}";
+        if sudo -u postgres createuser --createdb --no-createrole --no-superuser odoo 2>/dev/null; then
+            echo -e "  ${GREENC}✓${NC} Usuario PostgreSQL 'odoo' creado exitosamente";
+            if [ ! -z "$DB_PASSWORD" ]; then
+                sudo -u postgres psql -c "ALTER USER odoo PASSWORD '$DB_PASSWORD';" 2>/dev/null;
+                echo -e "  ${GREENC}✓${NC} Contraseña configurada para usuario 'odoo'";
+            fi
+        else
+            echo -e "  ${YELLOWC}⚠${NC} No se pudo crear usuario PostgreSQL 'odoo'";
+            ((missing_dirs++));
+        fi
     fi
 else
     echo -e "  ${REDC}✗${NC} PostgreSQL NO INSTALADO";
-    ((missing_dirs++));
+    echo -e "  ${BLUEC}Intentando instalar PostgreSQL...${NC}";
+    sudo apt-get install -qqq -y postgresql postgresql-contrib;
+    if command -v psql >/dev/null 2>&1; then
+        echo -e "  ${GREENC}✓${NC} PostgreSQL instalado exitosamente";
+        sudo systemctl start postgresql;
+        sudo systemctl enable postgresql;
+    else
+        echo -e "  ${REDC}✗${NC} No se pudo instalar PostgreSQL";
+        ((missing_dirs++));
+    fi
 fi
 
 # Verificar servicio Odoo
@@ -1013,10 +1035,13 @@ fi
 
 echo -e "\n${GREENC}Odoo instalado!${NC}\n";
 echo -e "${BLUEC}Continuando con configuración de servicios...${NC}";
+echo -e "${BLUEC}DEBUG: missing_dirs = $missing_dirs${NC}";
+echo -e "${BLUEC}DEBUG: INSTALL_LOCAL_NGINX = $INSTALL_LOCAL_NGINX${NC}";
 
 #--------------------------------------------------
 # Configuración avanzada de Nginx con SSL
 #--------------------------------------------------
+echo -e "${BLUEC}DEBUG: Iniciando sección de configuración de Nginx...${NC}";
 echo -e "${BLUEC}Verificando configuración de Nginx...${NC}";
 echo -e "${BLUEC}INSTALL_LOCAL_NGINX = $INSTALL_LOCAL_NGINX${NC}";
 
@@ -1263,6 +1288,7 @@ EOF
     else
         echo -e "${BLUEC}Acceso web:${NC} http://$(hostname)";
     fi
+    echo -e "${BLUEC}DEBUG: Sección de Nginx completada${NC}";
 fi
 
 #--------------------------------------------------
@@ -1344,4 +1370,4 @@ echo -e "  • Ver estado: ${YELLOWC}sudo systemctl status odoo${NC}";
 echo -e "  • Ver logs: ${YELLOWC}sudo journalctl -u odoo -f${NC}";
 
 echo -e "\n${GREENC}¡Instalación lista para producción!${NC}\n";
-
+echo -e "${BLUEC}DEBUG: Script completado exitosamente${NC}\n";
