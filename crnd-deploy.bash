@@ -344,7 +344,7 @@ CURRENT_PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major
 echo -e "${BLUEC}Python actual: ${YELLOWC}$CURRENT_PYTHON_VERSION${NC}";
 
 # Determinar qué versión de Python instalar basado en la versión de Odoo
-local odoo_major;
+odoo_major="";
 if [[ "$ODOO_VERSION" == saas-* ]]; then
     odoo_major="${ODOO_VERSION#saas-}";
     odoo_major="${odoo_major%.*}";
