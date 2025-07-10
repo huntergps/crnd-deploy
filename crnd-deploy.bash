@@ -928,31 +928,31 @@ if [ -d "$VENV_DIR" ]; then
         echo -e "  ${BLUEC}Python encontrado en entorno virtual${NC}";
         
         # Verificar que pyOpenSSL está instalado en el entorno virtual
-        if "$VENV_DIR/bin/pip" list | grep -q "pyOpenSSL"; then
+        pip_list_output=$("$VENV_DIR/bin/pip" list 2>/dev/null | grep "pyOpenSSL" || echo "");
+        if [ ! -z "$pip_list_output" ]; then
             echo -e "  ${BLUEC}pyOpenSSL encontrado en pip list${NC}";
+        else
+            echo -e "  ${YELLOWC}pyOpenSSL no encontrado en pip list, verificando directamente...${NC}";
+        fi
+        
+        # Intentar importar OpenSSL directamente
+        openssl_test_output=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>&1);
+        openssl_test_exit_code=$?;
+        
+        if [ $openssl_test_exit_code -eq 0 ]; then
+            openssl_version=$(echo "$openssl_test_output" | grep "pyOpenSSL version:" | cut -d':' -f2 | xargs);
+            echo -e "  ${GREENC}✓${NC} pyOpenSSL instalado: $openssl_version";
             
-            # Intentar importar OpenSSL con más información de depuración
-            openssl_test_output=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>&1);
-            openssl_test_exit_code=$?;
-            
-            if [ $openssl_test_exit_code -eq 0 ]; then
-                openssl_version=$(echo "$openssl_test_output" | grep "pyOpenSSL version:" | cut -d':' -f2 | xargs);
-                echo -e "  ${GREENC}✓${NC} pyOpenSSL instalado: $openssl_version";
-                
-                if [[ "$openssl_version" == "21.0.0" ]]; then
-                    echo -e "  ${GREENC}✓${NC} Versión correcta (21.0.0)";
-                else
-                    echo -e "  ${YELLOWC}⚠${NC} Versión diferente a 21.0.0: $openssl_version";
-                fi
+            if [[ "$openssl_version" == "21.0.0" ]]; then
+                echo -e "  ${GREENC}✓${NC} Versión correcta (21.0.0)";
             else
-                echo -e "  ${REDC}✗${NC} pyOpenSSL NO FUNCIONA";
-                echo -e "  ${YELLOWC}Error:${NC} $openssl_test_output";
-                ((missing_dirs++));
+                echo -e "  ${YELLOWC}⚠${NC} Versión diferente a 21.0.0: $openssl_version";
             fi
         else
-            echo -e "  ${REDC}✗${NC} pyOpenSSL no encontrado en pip list";
+            echo -e "  ${REDC}✗${NC} pyOpenSSL NO FUNCIONA";
+            echo -e "  ${YELLOWC}Error:${NC} $openssl_test_output";
             echo -e "  ${YELLOWC}Intentando reinstalar pyOpenSSL...${NC}";
-            "$VENV_DIR/bin/pip" install --force-reinstall pyOpenSSL==21.0.0;
+            "$VENV_DIR/bin/pip" install --force-reinstall pyOpenSSL==21.0.0 2>/dev/null;
             ((missing_dirs++));
         fi
     else
