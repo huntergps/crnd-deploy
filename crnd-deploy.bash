@@ -693,6 +693,9 @@ echo -e "${BLUEC}Corrigiendo pyOpenSSL para Python 3.10...${NC}";
 sudo $VENV_DIR/bin/pip uninstall -y pyOpenSSL;
 sudo $VENV_DIR/bin/pip install pyOpenSSL==21.0.0;
 
+# Volver a activar el entorno virtual para refrescar el entorno
+source $VENV_DIR/bin/activate;
+
 # Verificar que la corrección funcionó
 if $VENV_DIR/bin/python3 -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>/dev/null; then
     echo -e "${GREENC}✓${NC} pyOpenSSL corregido exitosamente";
@@ -810,7 +813,7 @@ if [ ! -d $PROJECT_ROOT_DIR/enterprise ]; then
     echo -e "${BLUEC}Directorio enterprise creado: ${YELLOWC}$PROJECT_ROOT_DIR/enterprise${NC}";
 else
     # Verificar que el propietario es correcto
-    local enterprise_owner=$(stat -c '%U' $PROJECT_ROOT_DIR/enterprise 2>/dev/null || echo "unknown");
+    enterprise_owner=$(stat -c '%U' $PROJECT_ROOT_DIR/enterprise 2>/dev/null || echo "unknown");
     if [ "$enterprise_owner" != "$ODOO_USER" ]; then
         sudo chown $ODOO_USER:$ODOO_USER $PROJECT_ROOT_DIR/enterprise;
         echo -e "${BLUEC}Propietario del directorio enterprise corregido${NC}";
@@ -896,7 +899,7 @@ declare -a critical_dirs=(
     "$PROJECT_ROOT_DIR/custom_addons"
 )
 
-local missing_dirs=0;
+missing_dirs=0;
 for dir in "${critical_dirs[@]}"; do
     if [ -d "$dir" ]; then
         echo -e "  ${GREENC}✓${NC} $dir";
@@ -919,7 +922,7 @@ fi
 echo -e "\n${BLUEC}Verificando pyOpenSSL...${NC}";
 if [ -d "$VENV_DIR" ]; then
     if "$VENV_DIR/bin/python3" -c "import OpenSSL; print('pyOpenSSL version:', OpenSSL.__version__)" 2>/dev/null; then
-        local openssl_version=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print(OpenSSL.__version__)" 2>/dev/null);
+        openssl_version=$("$VENV_DIR/bin/python3" -c "import OpenSSL; print(OpenSSL.__version__)" 2>/dev/null);
         echo -e "  ${GREENC}✓${NC} pyOpenSSL instalado: $openssl_version";
         
         if [[ "$openssl_version" == "21.0.0" ]]; then
